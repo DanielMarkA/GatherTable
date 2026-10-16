@@ -1,0 +1,290 @@
+@page "/events/studio-team-dinner/cost-split"
+@page "/events/{id}/cost-split"
+@inject NavigationManager Navigation
+@inject DiningCoordinatorService DiningService
+@inject IJSRuntime JS
+@implements IDisposable
+
+@{
+    var ev = DiningService.CurrentEvent;
+    var fin = DiningService.CalculateFinances();
+    var alexShare = fin.Shares.FirstOrDefault(s => s.GuestName.StartsWith("Alex")) ?? fin.Shares.FirstOrDefault();
+    var alexMain = alexShare?.MainCost ?? 32m;
+    var alexShared = alexShare?.SharedDishCost ?? fin.PerPersonSharedAmount;
+    var alexBase = alexMain + alexShared;
+    var alexTax = alexShare?.TaxAmount ?? Math.Round(alexBase * fin.TaxRate, 2);
+    var alexTip = alexShare?.TipAmount ?? Math.Round(alexBase * fin.TipRate, 2);
+    var alexTotal = alexShare?.TotalAmount ?? (alexBase + alexTax + alexTip);
+}
+
+
+<div class="max-w-7xl mx-auto px-6 py-8">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div>
+            <div class="text-[11px] font-bold tracking-wider text-[#738078] uppercase mb-1">
+                @ev.Title.ToUpper() / THU, OCT 22, 2026
+            </div>
+            <h1 class="text-3xl font-bold text-[#233D32] tracking-tight">
+                A clear bill. No loose ends.
+            </h1>
+            <p class="text-xs text-[#738078] mt-1">
+                Each guest pays for their choices and an equal share of the table dishes.
+            </p>
+        </div>
+        <div>
+            <button @onclick="ExportBreakdown" class="inline-flex items-center gap-2 px-4 py-2 border border-[#D5D3C4] bg-white hover:bg-neutral-50 text-[#233D32] text-xs font-semibold rounded-xl shadow-xs transition">
+                <svg class="w-3.5 h-3.5 text-[#738078]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Export breakdown</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <EventTabs ActiveTab="cost-split" />
+
+    <!-- Interactive Rate Adjuster Toolbar -->
+    <div class="bg-white rounded-xl border border-[#E3E1D5] p-4 mb-6 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-6">
+            <!-- Tip Selector -->
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-[#5A6860] uppercase tracking-wider text-[10px]">Tip rate:</span>
+                <div class="inline-flex rounded-lg border border-[#D5D3C4] p-0.5 bg-[#FAF9F5]">
+                    @foreach (var tip in new[] { 15m, 18m, 20m, 22m, 25m })
+                    {
+                        <button type="button"
+                                @onclick="() => SetTip(tip)"
+                                class="px-2.5 py-1 text-xs font-semibold rounded-md transition @(ev.TipPercent == tip ? "bg-[#244E3B] text-white shadow-xs" : "text-[#233D32] hover:bg-neutral-200/60")">
+                            @($"{tip:0}%")
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Tax Selector -->
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-[#5A6860] uppercase tracking-wider text-[10px]">Tax rate:</span>
+                <div class="inline-flex rounded-lg border border-[#D5D3C4] p-0.5 bg-[#FAF9F5]">
+                    @foreach (var tax in new[] { 7.5m, 8.0m, 8.5m, 9.0m, 9.5m })
+                    {
+                        <button type="button"
+                                @onclick="() => SetTax(tax)"
+                                class="px-2.5 py-1 text-xs font-semibold rounded-md transition @(ev.SalesTaxPercent == tax ? "bg-[#244E3B] text-white shadow-xs" : "text-[#233D32] hover:bg-neutral-200/60")">
+                            @($"{tax:0.#}%")
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="text-xs text-[#738078] flex items-center gap-1.5 font-medium">
+            <svg class="w-3.5 h-3.5 text-[#247847]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Live recalculated for all @fin.Shares.Count table guests</span>
+        </div>
+    </div>
+
+    <!-- 4 Financial Metric Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <MetricCard Label="Food subtotal" Value="@($"${fin.FoodSubtotal:0.00}")" Subtitle="@($"{fin.MainCount} mains · ${fin.FoodSubtotal - fin.SharedBowlTotal:0.##} + {fin.SharedCount} shared sides · ${fin.SharedBowlTotal:0.##}")" IconType="receipt" />
+        <MetricCard Label="@($"Sales tax · {ev.SalesTaxPercent:0.#}%")" Value="@($"${fin.TaxAmount:0.00}")" Subtitle="Applied to each person's food share" IconType="receipt" />
+        <MetricCard Label="@($"Tip · {ev.TipPercent:0.#}%")" Value="@($"${fin.TipAmount:0.00}")" Subtitle="Calculated before tax" IconType="receipt" />
+
+        <!-- Highlighted Total Card -->
+        <div class="bg-[#244E3B] text-white rounded-xl p-5 shadow-xs flex flex-col justify-between">
+            <div class="text-xs text-white/80 mb-3">
+                Estimated group total
+            </div>
+            <div>
+                <div class="text-3xl font-bold tracking-tight mb-1.5">
+                    $@fin.TotalAmount.ToString("0.00")
+                </div>
+                <div class="text-[11px] text-white/70">
+                    USD · Not a payment request
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breakdown Table Card -->
+    <div class="bg-white rounded-2xl border border-[#E3E1D5] shadow-xs mb-8 overflow-hidden">
+        <div class="p-6 border-b border-[#E8E7DF] flex items-center justify-between">
+            <div>
+                <h2 class="text-base font-bold text-[#233D32]">Everyone's share</h2>
+                <p class="text-xs text-[#738078]">@fin.Shares.Count guests · All pre-orders saved · Shared items split equally</p>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-[#EAF5EE] text-[#247847]">
+                Estimates up to date
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+                <thead>
+                    <tr class="bg-[#FAF9F5] border-b border-[#E8E7DF] text-[10px] uppercase font-bold text-[#738078]">
+                        <th class="p-4 font-bold">Guest</th>
+                        <th class="p-4 font-bold">Main Dish</th>
+                        <th class="p-4 text-right font-bold">Main</th>
+                        <th class="p-4 text-right font-bold">Shared</th>
+                        <th class="p-4 text-right font-bold">Tax · @ev.SalesTaxPercent.ToString("0")%</th>
+                        <th class="p-4 text-right font-bold">Tip · @ev.TipPercent.ToString("0")%</th>
+                        <th class="p-4 text-right font-bold">Total</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#E8E7DF]">
+                    @foreach (var share in fin.Shares)
+                    {
+                        <tr class="hover:bg-[#FAF9F5] transition">
+                            <td class="p-4">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-7 h-7 rounded-full bg-[#E9F0E9] text-[#244E3B] font-semibold text-xs flex items-center justify-center shrink-0">
+                                        @share.GuestInitials
+                                    </div>
+                                    <span class="font-bold text-[#233D32]">@share.GuestName</span>
+                                </div>
+                            </td>
+                            <td class="p-4">
+                                <div class="font-medium text-[#233D32]">@share.MainDishName</div>
+                                <div class="text-[11px] text-[#738078]">Quantity @share.MainQuantity</div>
+                            </td>
+                            <td class="p-4 text-right text-[#233D32] font-medium">
+                                $@share.MainCost.ToString("0.00")
+                            </td>
+                            <td class="p-4 text-right text-[#233D32] font-medium">
+                                $@share.SharedDishCost.ToString("0.00")
+                            </td>
+                            <td class="p-4 text-right text-[#233D32] font-medium">
+                                $@share.TaxAmount.ToString("0.00")
+                            </td>
+                            <td class="p-4 text-right text-[#233D32] font-medium">
+                                $@share.TipAmount.ToString("0.00")
+                            </td>
+                            <td class="p-4 text-right font-bold text-[#233D32]">
+                                $@share.TotalAmount.ToString("0.00")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="bg-[#FAF9F5] font-bold text-xs text-[#233D32] border-t-2 border-[#E3E1D5]">
+                        <td class="p-4">Group total</td>
+                        <td class="p-4 text-[11px] font-normal text-[#738078]">@fin.MainCount mains + @fin.SharedCount shared sides</td>
+                        <td class="p-4 text-right">$@((fin.FoodSubtotal - fin.SharedBowlTotal).ToString("0.00"))</td>
+                        <td class="p-4 text-right">$@fin.SharedBowlTotal.ToString("0.00")</td>
+                        <td class="p-4 text-right">$@fin.TaxAmount.ToString("0.00")</td>
+                        <td class="p-4 text-right">$@fin.TipAmount.ToString("0.00")</td>
+                        <td class="p-4 text-right text-sm font-bold text-[#244E3B]">$@fin.TotalAmount.ToString("0.00")</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="p-4 bg-[#FAF9F5] border-t border-[#E8E7DF] flex items-center gap-2 text-xs text-[#247847]">
+            <svg class="w-4 h-4 text-[#247847]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <span>All shares add up exactly. No unassigned costs or rounding difference.</span>
+        </div>
+    </div>
+
+    <!-- Explanatory Cards (2 Columns) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <!-- Left: How shared dishes are divided -->
+        <div class="bg-white rounded-2xl border border-[#E3E1D5] p-6 shadow-xs flex flex-col justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-[#233D32] mb-1">How shared dishes are divided</h3>
+                <p class="text-xs text-[#738078] mb-4">A little for everyone. An equal share for each.</p>
+
+                <div class="flex items-center justify-between p-3.5 bg-[#F7F6F0] rounded-xl border border-[#E3E1D5] mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-white border border-[#E3E1D5] flex items-center justify-center text-[#244E3B]">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-[#233D32]">Roasted vegetables</div>
+                            <div class="text-[11px] text-[#738078]">@fin.SharedCount bowls × $12.00 = $@fin.SharedBowlTotal.ToString("0.00")</div>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#EDECE6] text-[#5A6860]">
+                        All @fin.Shares.Count guests
+                    </span>
+                </div>
+
+                <div class="p-3 bg-[#F0EFE5] rounded-xl text-xs font-mono text-[#233D32] flex items-center justify-between mb-4">
+                    <span>$@fin.SharedBowlTotal.ToString("0.00") ÷ @fin.Shares.Count guests</span>
+                    <span class="text-[#738078]">→</span>
+                    <span class="font-bold text-sm">$@fin.PerPersonSharedAmount.ToString("0.00") each</span>
+                </div>
+            </div>
+
+            <p class="text-[11px] text-[#738078] leading-relaxed">
+                Each person's tax and tip include their $@fin.PerPersonSharedAmount.ToString("0.00") shared portion. Dietary preparation requests do not change anyone's allocation.
+            </p>
+        </div>
+
+        <!-- Right: The calculation, plainly -->
+        <div class="bg-white rounded-2xl border border-[#E3E1D5] p-6 shadow-xs flex flex-col justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-[#233D32] mb-1">The calculation, plainly</h3>
+                <p class="text-xs text-[#738078] mb-4">For @(alexShare?.GuestName ?? "Alex")'s @(alexShare?.MainDishName.ToLower() ?? "salmon") order:</p>
+
+                <div class="space-y-2 text-xs text-[#233D32] mb-4">
+                    <div class="flex items-center justify-between pb-2 border-b border-[#E8E7DF]">
+                        <span>Main + shared portion</span>
+                        <span class="font-medium">$@alexMain.ToString("0.##") + $@alexShared.ToString("0.##") = $@alexBase.ToString("0.00")</span>
+                    </div>
+                    <div class="flex items-center justify-between pb-2 border-b border-[#E8E7DF]">
+                        <span>Tax: $@alexBase.ToString("0.00") × @ev.SalesTaxPercent.ToString("0.#")%</span>
+                        <span class="font-medium">$@alexTax.ToString("0.00")</span>
+                    </div>
+                    <div class="flex items-center justify-between pb-2 border-b border-[#E8E7DF]">
+                        <span>Tip: $@alexBase.ToString("0.00") × @ev.TipPercent.ToString("0.#")%</span>
+                        <span class="font-medium">$@alexTip.ToString("0.00")</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t-2 border-[#244E3B]">
+                <span class="text-sm font-bold text-[#233D32]">@(alexShare?.GuestName ?? "Alex")'s estimate</span>
+                <span class="text-xl font-bold text-[#244E3B]">$@alexTotal.ToString("0.00")</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Green Disclaimer Banner -->
+    <div class="p-4 bg-[#EAF5EE] border border-[#CCE7D5] rounded-xl text-xs text-[#247847] flex items-start gap-3">
+        <svg class="w-4 h-4 text-[#247847] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <p class="leading-relaxed">
+            <span class="font-bold">A plan for the bill, not a charge.</span>
+            No payment is collected in GatherTable. Prices and tax are based on the linked menu; the restaurant's final bill may vary. Two kitchen questions remain open before the order is finalized.
+        </p>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    protected override void OnInitialized()
+    {
+        DiningService.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        DiningService.OnChange -= StateHasChanged;
+    }
+
+    private void SetTip(decimal tip)
+    {
+        DiningService.UpdateRates(DiningService.CurrentEvent.SalesTaxPercent, tip);
+    }
+
+    private void SetTax(decimal tax)
+    {
+        DiningService.UpdateRates(tax, DiningService.CurrentEvent.TipPercent);
+    }
+
+    private void ExportBreakdown()
+    {
+        // Trigger print / export dialog
+        JS.InvokeVoidAsync("print");
+    }
+}
+
