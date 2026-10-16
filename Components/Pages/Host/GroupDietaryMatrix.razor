@@ -1,0 +1,451 @@
+@page "/events/studio-team-dinner/matrix"
+@page "/events/{id}/matrix"
+@inject NavigationManager Navigation
+@inject DiningCoordinatorService DiningService
+@implements IDisposable
+
+@{
+    var ev = DiningService.CurrentEvent;
+    var openInquiries = ev.KitchenInquiries.Count(i => i.Status == KitchenConfirmationStatus.AwaitingReply);
+
+    IEnumerable<Guest> filteredGuests = activeFilter switch
+    {
+        "allergies" => ev.Guests.Where(g => g.DietaryProfile.HasAllergies),
+        "preferences" => ev.Guests.Where(g => g.DietaryProfile.HasPreferences),
+        _ => ev.Guests
+    };
+}
+
+<div class="max-w-7xl mx-auto px-6 py-8">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div>
+            <div class="text-[11px] font-bold tracking-wider text-[#738078] uppercase mb-1">
+                @ev.Title.ToUpper() / THU, OCT 22, 2026
+            </div>
+            <h1 class="text-3xl font-bold text-[#233D32] tracking-tight">
+                A place for every preference.
+            </h1>
+            <p class="text-xs text-[#738078] mt-1">
+                Compare guest profiles with the linked menu. Review the details, not just the checkmarks.
+            </p>
+        </div>
+        <div>
+            <button @onclick="OpenAskKitchen" class="inline-flex items-center gap-2 px-4 py-2.5 bg-[#244E3B] hover:bg-[#1B3D2E] text-white text-xs font-semibold rounded-xl shadow-xs transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                <span>Ask the kitchen</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <EventTabs ActiveTab="matrix" />
+
+    <!-- Filter Pills -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 text-xs">
+        <div class="flex items-center gap-2">
+            <button @onclick='() => activeFilter = "all"' class="px-3.5 py-1.5 rounded-full font-semibold transition @(activeFilter == "all" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
+                All guests · @ev.Guests.Count
+            </button>
+            <button @onclick='() => activeFilter = "allergies"' class="px-3.5 py-1.5 rounded-full font-semibold transition @(activeFilter == "allergies" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
+                Allergies · @ev.Guests.Count(g => g.DietaryProfile.HasAllergies)
+            </button>
+            <button @onclick='() => activeFilter = "preferences"' class="px-3.5 py-1.5 rounded-full font-semibold transition @(activeFilter == "preferences" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
+                Preferences · @ev.Guests.Count(g => g.DietaryProfile.HasPreferences)
+            </button>
+        </div>
+        <div class="text-[11px] text-[#738078]">
+            Menu checked Oct 19 · @ev.Menu.Count dishes
+        </div>
+    </div>
+
+    <!-- The Dietary Matrix Grid Card -->
+    <div class="bg-white rounded-2xl border border-[#E3E1D5] shadow-xs mb-6 overflow-hidden">
+        <div class="p-6 border-b border-[#E8E7DF] flex items-center justify-between">
+            <h2 class="text-base font-bold text-[#233D32]">Guest × dish compatibility</h2>
+            @if (openInquiries > 0)
+            {
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-[#FFF8EC] text-[#945900] border border-[#F6D8A6]">
+                    @openInquiries kitchen questions open
+                </span>
+            }
+            else
+            {
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-[#EAF5EE] text-[#247847]">
+                    All kitchen questions confirmed
+                </span>
+            }
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs border-collapse">
+                <thead>
+                    <tr class="bg-[#FAF9F5] border-b border-[#E8E7DF] text-[#738078]">
+                        <th class="p-4 text-left font-bold w-52">
+                            <div class="text-[10px] uppercase">GUEST / RESTRICTION</div>
+                            <div class="text-[10px] font-normal text-[#738078]">Main + shared side selected below</div>
+                        </th>
+                        @foreach (var dish in ev.Menu)
+                        {
+                            <th class="p-4 text-center font-bold min-w-[150px]">
+                                <div class="text-xs text-[#233D32] font-semibold">@dish.Name</div>
+                                <div class="text-[11px] text-[#738078] font-normal">
+                                    $@dish.Price.ToString("0.00") @(dish.IsSharedDish ? "/ bowl" : "")
+                                </div>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#E8E7DF]">
+                    @foreach (var guest in filteredGuests)
+                    {
+                        var preOrder = ev.PreOrders.FirstOrDefault(p => p.GuestId == guest.Id);
+
+                        <tr class="hover:bg-[#FAF9F5] transition">
+                            <!-- Guest Column -->
+                            <td class="p-4">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-7 h-7 rounded-full bg-[#E9F0E9] text-[#244E3B] font-semibold text-xs flex items-center justify-center shrink-0">
+                                        @guest.Initials
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-[#233D32]">@guest.Name</div>
+                                        <div class="text-[11px] @(guest.DietaryProfile.HasSevereAllergy ? "text-[#BC3A2B] font-semibold" : "text-[#738078]")">
+                                            @guest.DietaryProfile.Summary
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Dishes Columns -->
+                            @foreach (var dish in ev.Menu)
+                            {
+                                var compat = DiningService.EvaluateCompatibility(guest, dish, out var badgeText, out var helper);
+                                var isSelectedMain = preOrder != null && preOrder.MenuItemId == dish.Id;
+                                var isSharedVeg = dish.IsSharedDish;
+
+                                <td class="p-3 text-center align-middle cursor-pointer hover:bg-neutral-100 transition rounded-lg"
+                                    title="Click to view detailed compatibility breakdown"
+                                    @onclick="() => InspectCell(guest, dish, compat, helper)">
+                                    @if (compat == CompatibilityType.NoConflict)
+                                    {
+                                        <span class="inline-block px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#EAF5EE] text-[#247847]">
+                                            ✓ No listed conflict
+                                        </span>
+                                    }
+                                    else if (compat == CompatibilityType.IngredientConflict)
+                                    {
+                                        <span class="inline-block px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#FDF0ED] text-[#BC3A2B]">
+                                            ✕ Ingredient conflict
+                                        </span>
+                                    }
+                                    else if (compat == CompatibilityType.CrossContactRisk)
+                                    {
+                                        <span class="inline-block px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#FFF8EC] text-[#945900]">
+                                            ⚠ Cross-contact?
+                                        </span>
+                                    }
+                                    else if (compat == CompatibilityType.RecipeModification)
+                                    {
+                                        <span class="inline-block px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#EDECE6] text-[#5A6860]">
+                                            ⛭ Modify recipe
+                                        </span>
+                                    }
+
+                                    <!-- Selected Subtext -->
+                                    @if (isSelectedMain)
+                                    {
+                                        <div class="text-[10px] text-[#244E3B] font-bold mt-1">
+                                            Selected main
+                                        </div>
+                                    }
+                                    else if (isSharedVeg)
+                                    {
+                                        <div class="text-[10px] text-[#738078] mt-1">
+                                            Shared · $4 each
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-[10px] text-[#A0A8A3] mt-1">—</div>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Legend at bottom of matrix -->
+        <div class="p-4 bg-[#FAF9F5] border-t border-[#E8E7DF] flex flex-wrap items-center gap-6 text-[11px] text-[#738078]">
+            <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-[#EAF5EE] text-[#247847] flex items-center justify-center text-[8px] font-bold">✓</span>
+                <span>No listed conflict</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-[#FDF0ED] text-[#BC3A2B] flex items-center justify-center text-[8px] font-bold">✕</span>
+                <span>Ingredient conflict</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-[#FFF8EC] text-[#945900] flex items-center justify-center text-[8px] font-bold">⚠</span>
+                <span>Cross-contact?</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded bg-[#EDECE6] text-[#5A6860] flex items-center justify-center text-[8px] font-bold">⛭</span>
+                <span>Modify recipe</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Warning Callout -->
+    <div class="p-4 bg-[#FFF8EC] border border-[#F6D8A6] rounded-xl text-xs text-[#945900] mb-8 flex items-start gap-3">
+        <svg class="w-4 h-4 text-[#945900] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <p class="leading-relaxed">
+            <span class="font-bold">No listed ingredient conflict does not mean allergy-safe.</span>
+            Menus may omit ingredients, and shared pans, utensils or preparation areas can cause cross-contact. Only the restaurant can confirm its handling process.
+        </p>
+    </div>
+
+    <!-- Resolve Before Sending Section -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-bold text-[#233D32]">Resolve before sending</h2>
+            <span class="text-xs text-[#738078]">Requested today at 9:30 AM · Awaiting venue reply</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            @foreach (var inq in ev.KitchenInquiries)
+            {
+                <div class="bg-white rounded-2xl border border-[#E3E1D5] p-6 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold @(inq.IsSevere ? "bg-[#FDF0ED] text-[#BC3A2B]" : "bg-[#EDECE6] text-[#5A6860]")">
+                                @inq.CategoryBadge
+                            </span>
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold @(inq.Status == KitchenConfirmationStatus.Confirmed ? "bg-[#EAF5EE] text-[#247847]" : "bg-[#FFF8EC] text-[#945900]")">
+                                @(inq.Status == KitchenConfirmationStatus.Confirmed ? "Confirmed" : "Unconfirmed")
+                            </span>
+                        </div>
+
+                        <h3 class="text-sm font-bold text-[#233D32] mb-2">@inq.Title</h3>
+                        <p class="text-xs text-[#64746B] leading-relaxed mb-4">
+                            @inq.QuestionText
+                        </p>
+                    </div>
+
+                    <div class="pt-4 border-t border-[#E8E7DF] flex items-center justify-between">
+                        <button @onclick="() => OpenInquiry(inq)" class="text-xs font-semibold text-[#244E3B] hover:underline flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            <span>View kitchen conversation</span>
+                        </button>
+                        @if (inq.Status == KitchenConfirmationStatus.AwaitingReply)
+                        {
+                            <button @onclick="() => QuickConfirm(inq)" class="px-2.5 py-1 text-[11px] font-semibold bg-[#244E3B] text-white rounded-lg hover:bg-[#1B3D2E]">
+                                Quick confirm
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Footnote on Recipe Adjustments -->
+    <div class="text-xs text-[#738078] leading-relaxed p-4 bg-[#F0EFE5] rounded-xl border border-[#E3E1D5]">
+        Recipe adjustments: risotto uses vegetarian stock and no Parmesan for Maya and Priya. Low-sodium changes are preferences, not allergy restrictions.
+    </div>
+</div>
+
+<KitchenReplyModal IsOpen="isModalOpen" Inquiry="selectedInquiry" OnClose="CloseModal" />
+
+@if (isCellModalOpen && inspectGuest != null && inspectDish != null)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in">
+        <div class="bg-white rounded-2xl max-w-lg w-full border border-[#E3E1D5] shadow-xl overflow-hidden text-xs text-[#233D32]">
+            <div class="p-6 border-b border-[#E8E7DF] flex items-center justify-between">
+                <div>
+                    <div class="text-[10px] uppercase font-bold tracking-wider text-[#738078] mb-1">
+                        Dietary Compatibility Breakdown
+                    </div>
+                    <h3 class="text-base font-bold text-[#233D32]">
+                        @inspectGuest.Name × @inspectDish.Name
+                    </h3>
+                </div>
+                <button @onclick="() => isCellModalOpen = false" class="text-[#738078] hover:text-[#233D32] p-1 font-bold">
+                    ✕
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <!-- Status Badge Banner -->
+                <div class="p-4 rounded-xl border flex items-start gap-3 @GetStatusBannerClass(inspectCompat)">
+                    <div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold @GetStatusIconClass(inspectCompat)">
+                        @GetStatusIcon(inspectCompat)
+                    </div>
+                    <div>
+                        <div class="font-bold text-xs">@GetStatusTitle(inspectCompat)</div>
+                        <div class="text-[11px] mt-0.5 leading-relaxed">@GetCompatibilityExplanation(inspectGuest, inspectDish, inspectCompat)</div>
+                    </div>
+                </div>
+
+                <!-- Guest Profile Summary -->
+                <div class="p-4 bg-[#F7F6F0] rounded-xl border border-[#E8E7DF] space-y-1">
+                    <div class="font-bold text-[11px] text-[#738078] uppercase">Guest Dietary Constraints</div>
+                    <div class="font-semibold text-[#233D32]">@inspectGuest.Name (@inspectGuest.DietaryProfile.Summary)</div>
+                    @if (!string.IsNullOrEmpty(inspectGuest.DietaryProfile.Notes))
+                    {
+                        <div class="text-[11px] text-[#738078] italic">"@inspectGuest.DietaryProfile.Notes"</div>
+                    }
+                </div>
+
+                <!-- Dish Composition -->
+                <div class="p-4 bg-[#F7F6F0] rounded-xl border border-[#E8E7DF] space-y-1">
+                    <div class="font-bold text-[11px] text-[#738078] uppercase">Dish Profile ($@inspectDish.Price.ToString("0.00"))</div>
+                    <div class="text-[11px] text-[#233D32]">Ingredients: @string.Join(", ", inspectDish.Ingredients)</div>
+                    <div class="text-[11px] text-[#738078]">Declared Allergens: @(inspectDish.DeclaredAllergens.Count > 0 ? string.Join(", ", inspectDish.DeclaredAllergens) : "None")</div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-[#FAF9F5] border-t border-[#E8E7DF] flex items-center justify-end gap-3">
+                <button @onclick="() => isCellModalOpen = false" class="px-4 py-2 border border-[#D5D3C4] rounded-xl font-semibold hover:bg-neutral-50">
+                    Close
+                </button>
+                @if (inspectCompat == CompatibilityType.CrossContactRisk || inspectCompat == CompatibilityType.RecipeModification)
+                {
+                    <button @onclick="ViewInquiryForInspect" class="px-4 py-2 bg-[#244E3B] text-white rounded-xl font-semibold hover:bg-[#1B3D2E] transition">
+                        View Kitchen Inquiry
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private string activeFilter = "all";
+    private bool isModalOpen = false;
+    private KitchenInquiry? selectedInquiry;
+
+    private bool isCellModalOpen = false;
+    private Guest? inspectGuest;
+    private MenuItem? inspectDish;
+    private CompatibilityType inspectCompat;
+    private string inspectHelper = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        DiningService.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        DiningService.OnChange -= StateHasChanged;
+    }
+
+    private void InspectCell(Guest guest, MenuItem dish, CompatibilityType compat, string helper)
+    {
+        inspectGuest = guest;
+        inspectDish = dish;
+        inspectCompat = compat;
+        inspectHelper = helper;
+        isCellModalOpen = true;
+    }
+
+    private string GetStatusBannerClass(CompatibilityType compat) => compat switch
+    {
+        CompatibilityType.NoConflict => "bg-[#EAF5EE] border-[#CCE7D5] text-[#247847]",
+        CompatibilityType.IngredientConflict => "bg-[#FDF0ED] border-[#F5C7BE] text-[#BC3A2B]",
+        CompatibilityType.CrossContactRisk => "bg-[#FFF8EC] border-[#F6D8A6] text-[#945900]",
+        CompatibilityType.RecipeModification => "bg-[#EDECE6] border-[#D5D3C4] text-[#5A6860]",
+        _ => "bg-[#F7F6F0] border-[#E8E7DF] text-[#738078]"
+    };
+
+    private string GetStatusIconClass(CompatibilityType compat) => compat switch
+    {
+        CompatibilityType.NoConflict => "bg-[#247847] text-white",
+        CompatibilityType.IngredientConflict => "bg-[#BC3A2B] text-white",
+        CompatibilityType.CrossContactRisk => "bg-[#945900] text-white",
+        CompatibilityType.RecipeModification => "bg-[#5A6860] text-white",
+        _ => "bg-gray-400 text-white"
+    };
+
+    private string GetStatusIcon(CompatibilityType compat) => compat switch
+    {
+        CompatibilityType.NoConflict => "✓",
+        CompatibilityType.IngredientConflict => "✕",
+        CompatibilityType.CrossContactRisk => "!",
+        CompatibilityType.RecipeModification => "⚙",
+        _ => "•"
+    };
+
+    private string GetStatusTitle(CompatibilityType compat) => compat switch
+    {
+        CompatibilityType.NoConflict => "No Listed Conflict",
+        CompatibilityType.IngredientConflict => "Direct Ingredient Conflict",
+        CompatibilityType.CrossContactRisk => "Cross-Contact Risk Detected",
+        CompatibilityType.RecipeModification => "Recipe Modification Required",
+        _ => "Compatibility Unknown"
+    };
+
+    private string GetCompatibilityExplanation(Guest guest, MenuItem dish, CompatibilityType compat)
+    {
+        if (compat == CompatibilityType.IngredientConflict)
+        {
+            if (dish.DeclaredAllergens.Any(a => a.Equals("shellfish", StringComparison.OrdinalIgnoreCase)))
+            {
+                return $"Dish contains shellfish ({string.Join(", ", dish.Ingredients.Where(i => i.Contains("shrimp", StringComparison.OrdinalIgnoreCase)))}), creating a severe allergic conflict.";
+            }
+            return $"Dish contains animal products ({dish.Name}), which directly conflicts with vegetarian preferences.";
+        }
+
+        if (compat == CompatibilityType.CrossContactRisk)
+        {
+            return "Dish ingredients do not contain shellfish, but the venue kitchen prepares shrimp toast, creating potential cross-contact risk with cooking surfaces, fryers, or utensils.";
+        }
+
+        if (compat == CompatibilityType.RecipeModification)
+        {
+            if (guest.DietaryProfile.Preferences.Contains("Low sodium"))
+            {
+                return "Preparation modification requested: unsalted stock, no added table salt during roasting, and sauce served on the side.";
+            }
+            return "Preparation modification requested: vegetable stock substitution and omission of Parmesan cheese.";
+        }
+
+        return "All declared ingredients and cooking methods align with this guest profile without reported conflicts.";
+    }
+
+    private void ViewInquiryForInspect()
+    {
+        isCellModalOpen = false;
+        selectedInquiry = DiningService.CurrentEvent.KitchenInquiries.FirstOrDefault(i => i.GuestId == inspectGuest?.Id) ??
+                          DiningService.CurrentEvent.KitchenInquiries.FirstOrDefault();
+        isModalOpen = true;
+    }
+
+    private void OpenAskKitchen()
+    {
+        selectedInquiry = DiningService.CurrentEvent.KitchenInquiries.FirstOrDefault();
+        isModalOpen = true;
+    }
+
+    private void OpenInquiry(KitchenInquiry inq)
+    {
+        selectedInquiry = inq;
+        isModalOpen = true;
+    }
+
+    private void QuickConfirm(KitchenInquiry inq)
+    {
+        DiningService.ConfirmKitchenInquiry(inq.Id, "Confirmed by phone with kitchen manager.");
+    }
+
+    private void CloseModal()
+    {
+        isModalOpen = false;
+    }
+}
+

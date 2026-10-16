@@ -1,0 +1,93 @@
+@inject DiningCoordinatorService DiningService
+
+@if (IsOpen && Inquiry != null)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in">
+        <div class="bg-white rounded-2xl max-w-lg w-full border border-[#E3E1D5] shadow-xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-6 border-b border-[#E8E7DF] flex items-center justify-between">
+                <div>
+                    <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold @(Inquiry.IsSevere ? "bg-[#FDF0ED] text-[#BC3A2B]" : "bg-[#EDECE6] text-[#5A6860]") mb-1">
+                        @Inquiry.CategoryBadge
+                    </span>
+                    <h3 class="text-base font-semibold text-[#233D32]">@Inquiry.Title</h3>
+                </div>
+                <button @onclick="Close" class="w-8 h-8 rounded-full hover:bg-black/5 flex items-center justify-center text-[#738078] hover:text-[#233D32]">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6 space-y-4">
+                <div class="bg-[#F7F6F0] rounded-xl p-4 border border-[#E8E7DF]">
+                    <div class="text-[11px] font-semibold uppercase text-[#738078] mb-1">Inquiry to Kitchen</div>
+                    <p class="text-xs text-[#233D32] leading-relaxed">@Inquiry.QuestionText</p>
+                    <div class="text-[11px] text-[#738078] mt-2 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path d="M12 6v6l4 2" stroke-width="2"/></svg>
+                        <span>@Inquiry.RequestedTimeLabel</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-[#233D32] mb-1.5">Restaurant / Kitchen Response</label>
+                    <textarea @bind="replyText" rows="3" class="w-full text-xs p-3 rounded-lg border border-[#D5D3C4] focus:outline-none focus:ring-1 focus:ring-[#244E3B] focus:border-[#244E3B] bg-white" placeholder="Add note or confirmation from the kitchen..."></textarea>
+                </div>
+
+                <div class="flex items-center gap-2 p-3 rounded-lg @(Inquiry.Status == KitchenConfirmationStatus.Confirmed ? "bg-[#EAF5EE] text-[#247847]" : "bg-[#FFF8EC] text-[#945900]") text-xs">
+                    @if (Inquiry.Status == KitchenConfirmationStatus.Confirmed)
+                    {
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        <span>Confirmed safe by restaurant staff. Pre-order is finalized.</span>
+                    }
+                    else
+                    {
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        <span>Awaiting kitchen confirmation. Separate preparation not yet guaranteed.</span>
+                    }
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="p-6 bg-[#F7F6F0] border-t border-[#E8E7DF] flex items-center justify-end gap-3">
+                <button @onclick="Close" class="px-4 py-2 rounded-lg text-xs font-medium border border-[#D5D3C4] bg-white text-[#233D32] hover:bg-neutral-50">
+                    Cancel
+                </button>
+                <button @onclick="ConfirmKitchen" class="px-4 py-2 rounded-lg text-xs font-semibold bg-[#244E3B] text-white hover:bg-[#1B3D2E] transition flex items-center gap-1.5 shadow-xs">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <span>Mark Confirmed by Kitchen</span>
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public KitchenInquiry? Inquiry { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string replyText = "Separate cookware and designated clean prep area confirmed with chef.";
+
+    protected override void OnParametersSet()
+    {
+        if (Inquiry != null && !string.IsNullOrEmpty(Inquiry.ResponseNote))
+        {
+            replyText = Inquiry.ResponseNote;
+        }
+    }
+
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task ConfirmKitchen()
+    {
+        if (Inquiry != null)
+        {
+            DiningService.ConfirmKitchenInquiry(Inquiry.Id, replyText);
+        }
+        await OnClose.InvokeAsync();
+    }
+}
+
