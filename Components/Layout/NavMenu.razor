@@ -1,0 +1,102 @@
+@inject NavigationManager Navigation
+@inject DiningCoordinatorService DiningService
+
+<div class="w-56 min-h-screen bg-[#F0EFE5] border-r border-[#E5E4DC] flex flex-col justify-between p-4 text-[#233D32] select-none">
+    <div>
+        <!-- Brand Logo -->
+        <a href="" class="flex items-center gap-2 px-2 py-3 mb-4 text-[#233D32] hover:opacity-90 transition">
+            <svg class="w-6 h-6 text-[#244E3B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"/>
+                <path d="M15 2v14"/>
+                <path d="M6 2v20"/>
+                <path d="M4 2v4a2 2 0 0 0 4 0V2"/>
+            </svg>
+            <span class="font-semibold text-lg tracking-tight">GatherTable</span>
+        </a>
+
+        <!-- Workspace Selector -->
+        <div class="mb-5">
+            <span class="text-[10px] font-bold tracking-wider text-[#738078] uppercase px-2 mb-1.5 block">Workspace</span>
+            <div class="flex items-center justify-between px-3 py-2 bg-white rounded-lg border border-[#E3E1D5] shadow-xs cursor-pointer hover:border-[#244E3B] transition">
+                <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-md bg-[#E9F0E9] text-[#244E3B] font-semibold text-xs flex items-center justify-center">ST</span>
+                    <span class="text-xs font-medium text-[#233D32]">Studio team</span>
+                </div>
+                <svg class="w-3.5 h-3.5 text-[#738078]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                </svg>
+            </div>
+        </div>
+
+        <!-- Main Navigation Links -->
+        <nav class="space-y-1 mb-6">
+            <NavLink href="" Match="NavLinkMatch.All" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition"
+                     ActiveClass="bg-[#244E3B] text-white shadow-xs font-semibold"
+                     UnselectedClass="text-[#46544C] hover:bg-[#E8E7DD] hover:text-[#233D32]">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span>Events</span>
+            </NavLink>
+
+            <NavLink href="venues" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-[#738078] hover:bg-[#E8E7DD] hover:text-[#233D32] transition"
+                     ActiveClass="bg-[#244E3B] text-white shadow-xs font-semibold">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+                <span>Venue menus</span>
+            </NavLink>
+
+            <NavLink href="guests" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-[#738078] hover:bg-[#E8E7DD] hover:text-[#233D32] transition"
+                     ActiveClass="bg-[#244E3B] text-white shadow-xs font-semibold">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                <span>Guest directory</span>
+            </NavLink>
+        </nav>
+
+        <!-- Pinned Event Section -->
+        <div class="mb-5">
+            <span class="text-[10px] font-bold tracking-wider text-[#738078] uppercase px-2 mb-2 block">Pinned Event</span>
+            <a href="events/studio-team-dinner" class="block p-2.5 rounded-lg border-l-2 border-[#244E3B] bg-white/70 hover:bg-white transition cursor-pointer">
+                <div class="text-xs font-semibold text-[#233D32]">Studio team dinner</div>
+                <div class="text-[11px] text-[#738078] mt-0.5">Oct 22 · 6 guests</div>
+            </a>
+        </div>
+
+        <!-- Helpful Side Card -->
+        <div class="bg-[#E9F0E9]/80 border border-[#DCE6DE] rounded-xl p-3.5 mb-4">
+            <div class="w-6 h-6 rounded-full bg-[#244E3B]/10 text-[#244E3B] flex items-center justify-center mb-2">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+            </div>
+            <div class="text-xs font-semibold text-[#233D32] leading-tight">A little planning. A better evening.</div>
+            <div class="text-[11px] text-[#64746B] mt-1 leading-normal">Keep everyone at the table, without the coordination chaos.</div>
+        </div>
+
+        <!-- Quick Switcher for Timed Sprint Evaluation -->
+        <div class="border-t border-[#E5E4DC] pt-3 mb-3">
+            <span class="text-[10px] font-bold tracking-wider text-[#738078] uppercase px-1 mb-1.5 block">Quick Jump</span>
+            <div class="space-y-1">
+                <a href="events/studio-team-dinner/matrix" class="block px-2 py-1 text-[11px] text-[#244E3B] hover:underline font-medium">Dietary Matrix</a>
+                <a href="events/studio-team-dinner/cost-split" class="block px-2 py-1 text-[11px] text-[#244E3B] hover:underline font-medium">Cost Split ($245.76)</a>
+                <a href="events/studio-team-dinner/ticket" class="block px-2 py-1 text-[11px] text-[#244E3B] hover:underline font-medium">Kitchen Order Ticket</a>
+                <a href="j/studio-oct22" class="block px-2 py-1 text-[11px] text-[#9A6700] hover:underline font-medium">Guest Mobile RSVP</a>
+                <a href="j/studio-oct22/menu" class="block px-2 py-1 text-[11px] text-[#9A6700] hover:underline font-medium">Guest Mobile Menu</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Host User Profile -->
+    <div class="border-t border-[#E5E4DC] pt-3 flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-[#244E3B] text-white font-semibold text-xs flex items-center justify-center shrink-0">
+            MC
+        </div>
+        <div class="overflow-hidden">
+            <div class="text-xs font-semibold text-[#233D32] truncate">Maya Chen</div>
+            <div class="text-[11px] text-[#738078] truncate">Host · Studio team</div>
+        </div>
+    </div>
+</div>

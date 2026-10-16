@@ -1,0 +1,82 @@
+@inject NavigationManager Navigation
+@inject DiningCoordinatorService DiningService
+
+<div class="fixed bottom-4 right-4 z-50 print:hidden select-none">
+    @if (isExpanded)
+    {
+        <div class="bg-white/95 backdrop-blur-md border border-[#E3E1D5] rounded-2xl shadow-xl p-3 max-w-xs animate-fade-in text-xs text-[#233D32]">
+            <div class="flex items-center justify-between pb-2 mb-2 border-b border-[#E8E7DF]">
+                <div class="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] text-[#738078]">
+                    <svg class="w-3.5 h-3.5 text-[#244E3B]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    <span>Persona & View Switcher</span>
+                </div>
+                <button @onclick="() => isExpanded = false" class="text-[#738078] hover:text-[#233D32] p-1">
+                    ✕
+                </button>
+            </div>
+
+            <div class="space-y-1.5">
+                <a href="events/studio-team-dinner" class="flex items-center justify-between p-2 rounded-xl transition hover:bg-[#F0EFE5] @(IsActive("overview") ? "bg-[#EAF5EE] text-[#247847] font-semibold" : "text-[#233D32]")">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-[#244E3B] text-white font-bold text-[10px] flex items-center justify-center">MC</span>
+                        <div>
+                            <div class="font-semibold text-xs">Host: Maya Chen</div>
+                            <div class="text-[10px] text-[#738078]">Workspace & Event Coordinator</div>
+                        </div>
+                    </div>
+                    <svg class="w-3.5 h-3.5 text-[#738078]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+
+                <a href="j/studio-oct22" class="flex items-center justify-between p-2 rounded-xl transition hover:bg-[#F0EFE5] @(IsActive("j/studio-oct22") ? "bg-[#EAF5EE] text-[#247847] font-semibold" : "text-[#233D32]")">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-[#FDF0ED] text-[#BC3A2B] font-bold text-[10px] flex items-center justify-center">AR</span>
+                        <div>
+                            <div class="font-semibold text-xs">Guest: Alex Rivera</div>
+                            <div class="text-[10px] text-[#BC3A2B]">Severe Shellfish Allergy (Mobile)</div>
+                        </div>
+                    </div>
+                    <svg class="w-3.5 h-3.5 text-[#738078]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+
+                <a href="guest/guest-jordan" class="flex items-center justify-between p-2 rounded-xl transition hover:bg-[#F0EFE5] @(IsActive("guest-jordan") ? "bg-[#EAF5EE] text-[#247847] font-semibold" : "text-[#233D32]")">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-[#EDECE6] text-[#5A6860] font-bold text-[10px] flex items-center justify-center">JL</span>
+                        <div>
+                            <div class="font-semibold text-xs">Guest: Jordan Lee</div>
+                            <div class="text-[10px] text-[#738078]">Low Sodium Preference (Mobile)</div>
+                        </div>
+                    </div>
+                    <svg class="w-3.5 h-3.5 text-[#738078]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+
+                <a href="events/studio-team-dinner/ticket" class="flex items-center justify-between p-2 rounded-xl transition hover:bg-[#F0EFE5] @(IsActive("ticket") ? "bg-[#EAF5EE] text-[#247847] font-semibold" : "text-[#233D32]")">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-[#FAF9F5] border border-[#D5D3C4] text-[#233D32] font-bold text-[10px] flex items-center justify-center">KT</span>
+                        <div>
+                            <div class="font-semibold text-xs">Kitchen Order Ticket</div>
+                            <div class="text-[10px] text-[#738078]">Unified Restaurant Staff View</div>
+                        </div>
+                    </div>
+                    <svg class="w-3.5 h-3.5 text-[#738078]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <button @onclick="() => isExpanded = true" class="flex items-center gap-2 px-3.5 py-2.5 bg-[#244E3B] hover:bg-[#1B3D2E] text-white rounded-full shadow-lg transition text-xs font-semibold">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            <span>Switch Persona</span>
+        </button>
+    }
+</div>
+
+@code {
+    private bool isExpanded = false;
+
+    private bool IsActive(string fragment)
+    {
+        return Navigation.Uri.Contains(fragment, StringComparison.OrdinalIgnoreCase);
+    }
+}
+

@@ -1,0 +1,100 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+
+@if (IsGuestRoute())
+{
+    <main class="min-h-screen bg-[#F7F6F0] font-sans antialiased text-[#233D32]">
+        @Body
+    </main>
+}
+else
+{
+<div class="flex min-h-screen bg-[#F7F6F0] font-sans antialiased text-[#233D32]">
+    <!-- Left Fixed/Sticky Sidebar -->
+    <aside class="sticky top-0 h-screen shrink-0 hidden md:block">
+        <NavMenu />
+    </aside>
+
+    <!-- Main Content Flow -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <!-- Top Navigation Header -->
+        <header class="h-14 bg-white/80 backdrop-blur-sm border-b border-[#E8E7DF] px-6 flex items-center justify-between sticky top-0 z-30">
+            <div class="flex items-center gap-2 text-xs text-[#738078]">
+                <a href="" class="hover:text-[#233D32] transition">Events</a>
+                <span>&rsaquo;</span>
+                <span class="text-[#233D32] font-medium truncate">@GetBreadcrumbTitle()</span>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <!-- Auto-saved Indicator -->
+                <div class="flex items-center gap-1.5 text-xs text-[#738078]">
+                    <svg class="w-3.5 h-3.5 text-[#247847]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span>All changes saved</span>
+                </div>
+
+                <!-- Action icons -->
+                <button class="w-7 h-7 rounded-full hover:bg-black/5 flex items-center justify-center text-[#738078] hover:text-[#233D32] transition" title="Help">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke-width="2"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2"/>
+                    </svg>
+                </button>
+
+                <button class="w-7 h-7 rounded-full hover:bg-black/5 flex items-center justify-center text-[#738078] hover:text-[#233D32] transition relative" title="Notifications">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    <span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500"></span>
+                </button>
+
+                <!-- Profile avatar -->
+                <div class="w-7 h-7 rounded-full bg-[#E9F0E9] text-[#244E3B] font-semibold text-xs flex items-center justify-center border border-[#D5E2D8]">
+                    MC
+                </div>
+            </div>
+        </header>
+
+        <!-- Body Content -->
+        <main class="flex-1 pb-12">
+            @Body
+        </main>
+
+        <!-- Global Footer -->
+        <footer class="border-t border-[#E8E7DF] py-4 px-8 text-xs text-[#738078] flex items-center justify-between">
+            <div>One shared plan. Six individual preferences.</div>
+            <div>Monday, October 19, 2026</div>
+        </footer>
+    </div>
+</div>
+}
+
+<PersonaSwitcher />
+
+<div id="blazor-error-ui" class="bg-red-50 border border-red-200 text-red-800 p-4 fixed bottom-0 left-0 right-0 z-50 shadow-lg text-sm flex items-center justify-between" style="display: none;">
+    <span>An unhandled error has occurred. <a href="" class="underline font-semibold ml-2">Reload</a></span>
+    <button class="dismiss text-red-700 font-bold px-2 py-1">✕</button>
+</div>
+
+@code {
+    private bool IsGuestRoute()
+    {
+        var uri = Navigation.Uri.ToLower();
+        return uri.Contains("/j/");
+    }
+
+    private string GetBreadcrumbTitle()
+    {
+        var uri = Navigation.Uri.ToLower();
+        if (uri.Contains("/create")) return "Bring everyone to the table.";
+        if (uri.Contains("/matrix")) return "Studio team dinner / Dietary matrix";
+        if (uri.Contains("/menu")) return "Studio team dinner / Menu & pre-orders";
+        if (uri.Contains("/cost-split")) return "Studio team dinner / Cost split";
+        if (uri.Contains("/ticket")) return "Studio team dinner / Order ticket";
+        if (uri.Contains("/studio-team-dinner")) return "Studio team dinner";
+        if (uri.Contains("/j/")) return "Guest invitation";
+        return "Good food. Great company.";
+    }
+}
