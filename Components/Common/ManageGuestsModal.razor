@@ -1,0 +1,271 @@
+@using Sprint.Models
+@using Sprint.Services
+@inject DiningCoordinatorService DiningService
+
+@if (IsOpen)
+{
+    var ev = DiningService.CurrentEvent;
+
+    <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity" @onclick="Close"></div>
+
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl border border-[#E3E1D5]">
+                
+                <!-- Modal Header -->
+                <div class="bg-[#FAF9F5] px-6 py-4 border-b border-[#E8E7DF] flex items-center justify-between">
+                    <div>
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-[#738078]">
+                            DINING COORDINATOR · GUEST ROSTER
+                        </div>
+                        <h3 class="text-lg font-bold text-[#233D32]" id="modal-title">
+                            Manage Table Guests (@ev.Guests.Count)
+                        </h3>
+                    </div>
+                    <button type="button" @onclick="Close" class="rounded-lg p-1.5 text-[#738078] hover:text-[#233D32] hover:bg-[#EDECE6] transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="p-6 max-h-[75vh] overflow-y-auto space-y-6">
+                    
+                    <!-- Section: Current Guests -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-[#5A6860]">
+                                Current Attendees
+                            </h4>
+                            <span class="text-xs text-[#738078]">
+                                @ev.Guests.Count(g => g.Rsvp == RsvpStatus.Going) going · @ev.Guests.Count(g => g.Rsvp == RsvpStatus.Pending) pending
+                            </span>
+                        </div>
+
+                        <div class="divide-y divide-[#E8E7DF] border border-[#E8E7DF] rounded-xl overflow-hidden bg-white">
+                            @foreach (var guest in ev.Guests)
+                            {
+                                <div class="p-3.5 flex items-center justify-between hover:bg-[#FAF9F5] transition gap-3">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="w-8 h-8 rounded-full bg-[#E9F0E9] text-[#244E3B] font-bold text-xs flex items-center justify-center shrink-0">
+                                            @guest.Initials
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-[#233D32] truncate">@guest.Name</span>
+                                                @if (guest.IsHost)
+                                                {
+                                                    <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-[#FAF9F5] border border-[#D5D3C4] text-[#738078]">
+                                                        Host
+                                                    </span>
+                                                }
+                                            </div>
+                                            <div class="text-[11px] text-[#738078] truncate">
+                                                @guest.Email · <span class="@(guest.DietaryProfile.HasAllergies ? "text-[#BC3A2B] font-semibold" : "text-[#5A6860]")">@guest.DietaryProfile.Summary</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <!-- RSVP Status Selector -->
+                                        <select value="@guest.Rsvp"
+                                                @onchange="(e) => OnRsvpChanged(guest.Id, e)"
+                                                class="text-xs border border-[#D5D3C4] rounded-lg px-2 py-1 bg-white text-[#233D32] focus:outline-hidden focus:border-[#244E3B]">
+                                            <option value="@RsvpStatus.Going">Going</option>
+                                            <option value="@RsvpStatus.Pending">Pending</option>
+                                            <option value="@RsvpStatus.CantMakeIt">Can't Make It</option>
+                                        </select>
+
+                                        @if (!guest.IsHost)
+                                        {
+                                            <button type="button"
+                                                    @onclick="() => RemoveGuest(guest.Id)"
+                                                    title="Remove guest from event"
+                                                    class="p-1 rounded-lg text-[#738078] hover:text-[#BC3A2B] hover:bg-red-50 transition">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Section: Add New Guest -->
+                    <div class="bg-[#FAF9F5] p-4 rounded-xl border border-[#E3E1D5]">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-[#244E3B] mb-3">
+                            Add Guest to Table
+                        </h4>
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-[#BC3A2B]">
+                                @errorMessage
+                            </div>
+                        }
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-[#5A6860] mb-1">Full name *</label>
+                                <input type="text"
+                                       @bind="newName"
+                                       placeholder="e.g. Morgan Reed"
+                                       class="w-full text-xs px-3 py-2 rounded-lg border border-[#D5D3C4] bg-white text-[#233D32] focus:outline-hidden focus:border-[#244E3B]" />
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-[#5A6860] mb-1">Email address</label>
+                                <input type="email"
+                                       @bind="newEmail"
+                                       placeholder="e.g. morgan@studio.co"
+                                       class="w-full text-xs px-3 py-2 rounded-lg border border-[#D5D3C4] bg-white text-[#233D32] focus:outline-hidden focus:border-[#244E3B]" />
+                            </div>
+                        </div>
+
+                        <!-- Allergen Checkbox Tags -->
+                        <div class="mb-3">
+                            <label class="block text-[11px] font-semibold text-[#5A6860] mb-1.5">Allergens (flagged in dietary matrix)</label>
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach (var allergen in availableAllergens)
+                                {
+                                    var isSelected = selectedAllergens.Contains(allergen);
+                                    <button type="button"
+                                            @onclick="() => ToggleAllergen(allergen)"
+                                            class="px-2.5 py-1 rounded-lg text-xs font-medium border transition @(isSelected ? "bg-[#BC3A2B] text-white border-[#BC3A2B]" : "bg-white text-[#5A6860] border-[#D5D3C4] hover:bg-neutral-100")">
+                                        @allergen
+                                    </button>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Dietary Preference Tags -->
+                        <div class="mb-3">
+                            <label class="block text-[11px] font-semibold text-[#5A6860] mb-1.5">Dietary preferences</label>
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach (var pref in availablePreferences)
+                                {
+                                    var isSelected = selectedPreferences.Contains(pref);
+                                    <button type="button"
+                                            @onclick="() => TogglePreference(pref)"
+                                            class="px-2.5 py-1 rounded-lg text-xs font-medium border transition @(isSelected ? "bg-[#244E3B] text-white border-[#244E3B]" : "bg-white text-[#5A6860] border-[#D5D3C4] hover:bg-neutral-100")">
+                                        @pref
+                                    </button>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="block text-[11px] font-semibold text-[#5A6860] mb-1">Special kitchen note</label>
+                            <input type="text"
+                                   @bind="newNotes"
+                                   placeholder="e.g. Needs separate preparation surface"
+                                   class="w-full text-xs px-3 py-2 rounded-lg border border-[#D5D3C4] bg-white text-[#233D32] focus:outline-hidden focus:border-[#244E3B]" />
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="button"
+                                    @onclick="AddGuest"
+                                    class="px-4 py-2 bg-[#244E3B] hover:bg-[#1B3D2E] text-white text-xs font-semibold rounded-xl transition shadow-xs flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                <span>Add Guest to Table</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="bg-[#FAF9F5] px-6 py-3.5 border-t border-[#E8E7DF] flex items-center justify-between">
+                    <span class="text-xs text-[#738078]">
+                        Updates automatically adjust the Dietary Matrix and Cost Split calculations.
+                    </span>
+                    <button type="button"
+                            @onclick="Close"
+                            class="px-4 py-2 bg-white border border-[#D5D3C4] text-[#233D32] hover:bg-neutral-100 text-xs font-semibold rounded-xl transition">
+                        Done
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private string newName = "";
+    private string newEmail = "";
+    private string newNotes = "";
+    private string errorMessage = "";
+
+    private readonly List<string> availableAllergens = new()
+    {
+        "shellfish", "fish", "nuts", "dairy", "gluten", "sesame", "egg", "soy"
+    };
+
+    private readonly List<string> availablePreferences = new()
+    {
+        "Vegetarian", "Vegan", "Pescatarian", "Low sodium", "Gluten-free"
+    };
+
+    private HashSet<string> selectedAllergens = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> selectedPreferences = new(StringComparer.OrdinalIgnoreCase);
+
+    private void ToggleAllergen(string allergen)
+    {
+        if (selectedAllergens.Contains(allergen))
+            selectedAllergens.Remove(allergen);
+        else
+            selectedAllergens.Add(allergen);
+    }
+
+    private void TogglePreference(string pref)
+    {
+        if (selectedPreferences.Contains(pref))
+            selectedPreferences.Remove(pref);
+        else
+            selectedPreferences.Add(pref);
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private void OnRsvpChanged(string guestId, ChangeEventArgs e)
+    {
+        if (Enum.TryParse<RsvpStatus>(e.Value?.ToString(), out var status))
+        {
+            DiningService.UpdateGuestRsvp(guestId, status);
+        }
+    }
+
+    private void RemoveGuest(string guestId)
+    {
+        DiningService.RemoveGuest(guestId);
+    }
+
+    private void AddGuest()
+    {
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            errorMessage = "Please enter the guest's name.";
+            return;
+        }
+
+        errorMessage = "";
+        DiningService.AddGuest(
+            newName.Trim(),
+            newEmail.Trim(),
+            selectedAllergens.ToList(),
+            selectedPreferences.ToList(),
+            newNotes.Trim()
+        );
+
+        // Reset form
+        newName = "";
+        newEmail = "";
+        newNotes = "";
+        selectedAllergens.Clear();
+        selectedPreferences.Clear();
+    }
+}
