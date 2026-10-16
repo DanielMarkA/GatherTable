@@ -1,0 +1,352 @@
+@page "/events/studio-team-dinner/ticket"
+@page "/events/{id}/ticket"
+@inject NavigationManager Navigation
+@inject DiningCoordinatorService DiningService
+@inject IJSRuntime JS
+@implements IDisposable
+
+@{
+    var ev = DiningService.CurrentEvent;
+    var fin = DiningService.CalculateFinances();
+    var openInquiries = ev.KitchenInquiries.Count(i => i.Status == KitchenConfirmationStatus.AwaitingReply);
+}
+
+<div class="max-w-7xl mx-auto px-6 py-8 print:p-0 print:m-0 print:max-w-none">
+    <!-- Top Workspace Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 print:hidden">
+        <div>
+            <div class="text-[11px] font-bold tracking-wider text-[#738078] uppercase mb-1">
+                THE JUNIPER ROOM / GROUP DINING
+            </div>
+            <h1 class="text-3xl font-bold text-[#233D32] tracking-tight">
+                One table. One clear ticket.
+            </h1>
+            <p class="text-xs text-[#738078] mt-1">
+                A consolidated pre-order, with every guest's preparation notes attached.
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="events/studio-team-dinner" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#233D32] hover:bg-black/5 rounded-xl transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>Back to event</span>
+            </a>
+            <button @onclick="PrintTicket" class="inline-flex items-center gap-1.5 px-4 py-2 border border-[#D5D3C4] bg-white text-xs font-semibold rounded-xl text-[#233D32] hover:bg-neutral-50 shadow-xs">
+                <svg class="w-4 h-4 text-[#738078]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                <span>Print draft</span>
+            </button>
+            <button @onclick="ExportPdf" class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#244E3B] text-white text-xs font-semibold rounded-xl hover:bg-[#1B3D2E] shadow-xs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Export PDF</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="print:hidden">
+        <EventTabs ActiveTab="ticket" />
+    </div>
+
+    <!-- 2 Column Layout: Ticket on Left (2 cols), Sidebar on Right (1 col) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Main Structured Order Ticket -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-[#E3E1D5] p-8 shadow-xs">
+            <!-- Ticket Header Info -->
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-6 border-b border-[#E8E7DF] mb-6">
+                <div>
+                    <span class="text-[10px] font-bold tracking-wider uppercase text-[#738078] block mb-1">
+                        GROUP PRE-ORDER / GT-2210
+                    </span>
+                    <h2 class="text-2xl font-bold text-[#233D32]">@ev.Title</h2>
+                    <p class="text-xs text-[#738078] mt-0.5">@ev.VenueName · @ev.TableInfo</p>
+                </div>
+                <div class="sm:text-right">
+                    <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold @(openInquiries > 0 ? "bg-[#FFF8EC] text-[#945900] border border-[#F6D8A6]" : "bg-[#EAF5EE] text-[#247847]") mb-1.5">
+                        @(openInquiries > 0 ? $"DRAFT · {openInquiries} confirmations open" : "READY · Confirmed with kitchen")
+                    </span>
+                    <div class="text-[11px] text-[#738078]">Updated Oct 19, 2026 · 9:30 AM PT</div>
+                    <div class="text-[11px] text-[#738078]">Host: @ev.HostName · @ev.HostPhone</div>
+                </div>
+            </div>
+
+            <!-- Service Details Box -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-[#F7F6F0] rounded-xl border border-[#E8E7DF] mb-6 text-xs">
+                <div>
+                    <div class="text-[10px] uppercase font-bold text-[#738078] mb-1">SERVICE</div>
+                    <div class="font-semibold text-[#233D32]">Thu, Oct 22 · 7:00 PM PT</div>
+                </div>
+                <div>
+                    <div class="text-[10px] uppercase font-bold text-[#738078] mb-1">COVERS</div>
+                    <div class="font-semibold text-[#233D32]">6 guests · 6 mains</div>
+                </div>
+                <div>
+                    <div class="text-[10px] uppercase font-bold text-[#738078] mb-1">SHARED</div>
+                    <div class="font-semibold text-[#233D32]">2 bowls · Family style</div>
+                </div>
+            </div>
+
+            <!-- Severe Shellfish Allergy Critical Alert Box -->
+            <div class="p-4 bg-[#FDF0ED] border border-[#F5C7BE] rounded-xl text-xs text-[#BC3A2B] mb-6 flex items-start gap-3">
+                <svg class="w-5 h-5 shrink-0 text-[#BC3A2B] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <div class="leading-relaxed">
+                    <div class="font-bold uppercase tracking-wider text-[11px] mb-0.5">
+                        SEVERE SHELLFISH ALLERGY — ALEX RIVERA
+                    </div>
+                    Applies to Alex's citrus salmon and shared vegetables. Separate pan, clean utensils, separate prep area; confirm oil and sauces. Cross-contact precautions are @(openInquiries > 0 ? "NOT yet confirmed" : "CONFIRMED with kitchen"). Tell the host if the request cannot be accommodated.
+                </div>
+            </div>
+
+            <!-- Grouped Line Items -->
+            <div class="mb-8">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-[#738078] pb-2 border-b border-[#E8E7DF] flex items-center justify-between">
+                    <span class="w-12">QTY</span>
+                    <span class="flex-1">DISH / GUEST-SPECIFIC PREPARATION</span>
+                    <span>LINE TOTAL</span>
+                </div>
+
+                <div class="divide-y divide-[#E8E7DF]">
+                    <!-- Item 1: Mushroom Risotto (Qty 2) -->
+                    <div class="py-4 flex items-start justify-between gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-[#F0EFE5] font-bold text-base text-[#233D32] flex items-center justify-center shrink-0">
+                            2
+                        </div>
+                        <div class="flex-1 text-xs">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-bold text-sm text-[#233D32]">Mushroom risotto</span>
+                                <span class="text-[#738078] text-[11px]">$24.00 each</span>
+                            </div>
+                            <div class="font-semibold text-[#244E3B] mb-0.5">Maya Chen + Priya Shah</div>
+                            <p class="text-[#738078] text-[11px]">Both: vegetarian stock; no Parmesan. Vegetarian preference, not an allergy.</p>
+                        </div>
+                        <div class="text-sm font-bold text-[#233D32]">$48.00</div>
+                    </div>
+
+                    <!-- Item 2: Herb-roasted Chicken (Qty 2) -->
+                    <div class="py-4 flex items-start justify-between gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-[#F0EFE5] font-bold text-base text-[#233D32] flex items-center justify-center shrink-0">
+                            2
+                        </div>
+                        <div class="flex-1 text-xs space-y-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-sm text-[#233D32]">Herb-roasted chicken</span>
+                                <span class="text-[#738078] text-[11px]">$28.00 each</span>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold text-[#233D32]">Jordan Lee</span>
+                                    <button @onclick='() => OpenInquiryFor("Jordan")' class="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#FFF8EC] text-[#945900] border border-[#F6D8A6] hover:bg-[#FEEFD3]">
+                                        @(ev.KitchenInquiries.Any(i => i.GuestName.Contains("Jordan") && i.Status == KitchenConfirmationStatus.Confirmed) ? "Confirmed" : "Confirm")
+                                    </button>
+                                </div>
+                                <p class="text-[#738078] text-[11px] mt-0.5">No added salt; sauce on the side. Unsalted stock and vegetable share to confirm. Low-sodium preference.</p>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-[#233D32]">Sam Patel</div>
+                                <p class="text-[#738078] text-[11px]">Standard preparation.</p>
+                            </div>
+                        </div>
+                        <div class="text-sm font-bold text-[#233D32]">$56.00</div>
+                    </div>
+
+                    <!-- Item 3: Citrus Salmon (Qty 2) -->
+                    <div class="py-4 flex items-start justify-between gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-[#F0EFE5] font-bold text-base text-[#233D32] flex items-center justify-center shrink-0">
+                            2
+                        </div>
+                        <div class="flex-1 text-xs space-y-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-sm text-[#233D32]">Citrus salmon</span>
+                                <span class="text-[#738078] text-[11px]">$32.00 each</span>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-[#BC3A2B]">Alex Rivera · SEVERE SHELLFISH ALLERGY</span>
+                                    <button @onclick='() => OpenInquiryFor("Alex")' class="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#FFF8EC] text-[#945900] border border-[#F6D8A6] hover:bg-[#FEEFD3]">
+                                        @(ev.KitchenInquiries.Any(i => i.GuestName.Contains("Alex") && i.Status == KitchenConfirmationStatus.Confirmed) ? "Confirmed" : "Confirm")
+                                    </button>
+                                </div>
+                                <p class="text-[#BC3A2B] text-[11px] mt-0.5">Separate pan, utensils and prep area. Confirm oil and sauces. See allergy handling note above.</p>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-[#233D32]">Leo Martin</div>
+                                <p class="text-[#738078] text-[11px]">Standard preparation.</p>
+                            </div>
+                        </div>
+                        <div class="text-sm font-bold text-[#233D32]">$64.00</div>
+                    </div>
+
+                    <!-- Item 4: Roasted Vegetables (Shared Side x 2) -->
+                    <div class="py-4 flex items-start justify-between gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-[#F0EFE5] font-bold text-base text-[#233D32] flex items-center justify-center shrink-0">
+                            2
+                        </div>
+                        <div class="flex-1 text-xs">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-bold text-sm text-[#233D32]">Roasted vegetables · Shared side</span>
+                                <span class="text-[#738078] text-[11px]">$12.00 per bowl · 6 shares</span>
+                            </div>
+                            <div class="font-semibold text-[#233D32] mb-0.5">For all 6 guests</div>
+                            <p class="text-[#738078] text-[11px]">Serve family style. Set Alex's portion aside with separate handling; Jordan's portion without added salt. Both requests await confirmation.</p>
+                        </div>
+                        <div class="text-sm font-bold text-[#233D32]">$24.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Details & Financial Summary -->
+            <div class="pt-6 border-t border-[#E8E7DF] grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="text-xs text-[#738078] space-y-2">
+                    <div class="font-bold text-[#233D32]">Service & handling notes</div>
+                    <p class="leading-relaxed">Label modified plates with guest names. Keep Alex's meal and vegetable portion separate from shared serving utensils. No shrimp toast ordered.</p>
+                    @if (openInquiries > 0)
+                    {
+                        <p class="text-[#BC3A2B] font-semibold leading-relaxed">
+                            Do not treat this draft as a finalized kitchen order. Two preparation questions remain unanswered.
+                        </p>
+                    }
+                </div>
+
+                <div class="space-y-1.5 text-xs text-[#233D32] text-right">
+                    <div class="flex justify-between text-[#738078]">
+                        <span>Food subtotal</span>
+                        <span>$@fin.FoodSubtotal.ToString("0.00")</span>
+                    </div>
+                    <div class="flex justify-between text-[#738078]">
+                        <span>Tax · @ev.SalesTaxPercent.ToString("0")%</span>
+                        <span>$@fin.TaxAmount.ToString("0.00")</span>
+                    </div>
+                    <div class="flex justify-between text-[#738078]">
+                        <span>Tip · @ev.TipPercent.ToString("0")%, before tax</span>
+                        <span>$@fin.TipAmount.ToString("0.00")</span>
+                    </div>
+                    <div class="flex justify-between text-base font-bold pt-2 border-t border-[#E8E7DF]">
+                        <span>Estimated total</span>
+                        <span class="text-[#244E3B]">$@fin.TotalAmount.ToString("0.00")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Action Sidebar -->
+        <div class="space-y-6">
+            <!-- Before this goes to the line -->
+            <div class="bg-white rounded-2xl border border-[#E3E1D5] p-6 shadow-xs">
+                <h3 class="text-sm font-bold text-[#233D32] mb-1">Before this goes to the line</h3>
+                <p class="text-xs text-[#738078] mb-4">@openInquiries confirmations required</p>
+
+                <div class="space-y-4 mb-6">
+                    @foreach (var inq in ev.KitchenInquiries)
+                    {
+                        <div class="p-3.5 bg-[#FAF9F5] rounded-xl border border-[#E8E7DF] text-xs space-y-1.5">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold @(inq.IsSevere ? "bg-[#FDF0ED] text-[#BC3A2B]" : "bg-[#EDECE6] text-[#5A6860]")">
+                                @inq.CategoryBadge
+                            </span>
+                            <div class="font-bold text-[#233D32]">@inq.Title</div>
+                            <p class="text-[11px] text-[#738078] leading-relaxed">@inq.QuestionText</p>
+                            <div class="text-[10px] @(inq.Status == KitchenConfirmationStatus.Confirmed ? "text-[#247847]" : "text-[#945900]") font-semibold pt-1">
+                                @(inq.Status == KitchenConfirmationStatus.Confirmed ? "✓ Confirmed by kitchen" : "• Awaiting kitchen confirmation")
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <button @onclick="OpenReplyModal" class="w-full py-2.5 rounded-xl bg-[#244E3B] text-white text-xs font-semibold hover:bg-[#1B3D2E] transition flex items-center justify-center gap-1.5 shadow-xs">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    <span>Reply to host / Confirm</span>
+                </button>
+            </div>
+
+            <!-- Ready / Not ready to finalize Card -->
+            <div class="bg-white rounded-2xl border border-[#E3E1D5] p-6 shadow-xs">
+                @if (openInquiries > 0)
+                {
+                    <div class="flex items-center gap-2 text-xs font-bold text-[#738078] mb-2">
+                        <svg class="w-4 h-4 text-[#738078]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        <span>Not ready to finalize</span>
+                    </div>
+                    <p class="text-xs text-[#738078] mb-4 leading-relaxed">
+                        The host can finalize after both kitchen responses are reviewed and Alex's precautions are agreed.
+                    </p>
+                    <button disabled class="w-full py-2.5 rounded-xl bg-[#F0EFE5] text-[#738078] text-xs font-semibold cursor-not-allowed">
+                        Awaiting @openInquiries confirmations
+                    </button>
+                }
+                else
+                {
+                    <div class="flex items-center gap-2 text-xs font-bold text-[#247847] mb-2">
+                        <svg class="w-4 h-4 text-[#247847]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        <span>Ready to send to line</span>
+                    </div>
+                    <p class="text-xs text-[#247847] mb-4 leading-relaxed">
+                        All cross-contamination precautions and low-sodium preparations have been verified by restaurant staff.
+                    </p>
+                    <button @onclick="FinalizeTicket" class="w-full py-2.5 rounded-xl bg-[#244E3B] text-white text-xs font-semibold hover:bg-[#1B3D2E] shadow-xs">
+                        Finalize & Send Ticket to Kitchen
+                    </button>
+                }
+            </div>
+
+            <!-- Shared Understanding Callout -->
+            <div class="p-6 bg-[#FAF9F5] rounded-2xl border border-[#E3E1D5] text-xs space-y-3">
+                <div class="font-bold text-[#233D32]">A shared understanding</div>
+                <p class="text-[#738078] leading-relaxed">
+                    A recipe match is not a promise of allergy-safe preparation. If you cannot meet a request, tell Maya before accepting the ticket.
+                </p>
+                <div class="flex items-center gap-2 font-bold text-[#233D32] pt-2 border-t border-[#E8E7DF]">
+                    <svg class="w-4 h-4 text-[#244E3B]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                    <span>(415) 555-0142</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<KitchenReplyModal IsOpen="isModalOpen" Inquiry="selectedInquiry" OnClose="CloseModal" />
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private bool isModalOpen = false;
+    private KitchenInquiry? selectedInquiry;
+
+    protected override void OnInitialized()
+    {
+        DiningService.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        DiningService.OnChange -= StateHasChanged;
+    }
+
+    private void OpenReplyModal()
+    {
+        selectedInquiry = DiningService.CurrentEvent.KitchenInquiries.FirstOrDefault();
+        isModalOpen = true;
+    }
+
+    private void OpenInquiryFor(string name)
+    {
+        selectedInquiry = DiningService.CurrentEvent.KitchenInquiries.FirstOrDefault(i => i.GuestName.Contains(name));
+        isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        isModalOpen = false;
+    }
+
+    private void PrintTicket()
+    {
+        JS.InvokeVoidAsync("print");
+    }
+
+    private void ExportPdf()
+    {
+        JS.InvokeVoidAsync("print");
+    }
+
+    private void FinalizeTicket()
+    {
+        DiningService.CurrentEvent.Status = EventStatus.TicketSent;
+    }
+}
