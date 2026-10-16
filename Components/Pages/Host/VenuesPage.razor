@@ -1,0 +1,45 @@
+@page "/venues"
+@inject DiningCoordinatorService DiningService
+
+<div class="max-w-7xl mx-auto px-6 py-8">
+    <div class="mb-6">
+        <div class="text-[11px] font-bold tracking-wider text-[#738078] uppercase mb-1">
+            GATHERTABLE / VENUES
+        </div>
+        <h1 class="text-3xl font-bold text-[#233D32] tracking-tight">
+            Linked venue menus
+        </h1>
+        <p class="text-xs text-[#738078] mt-1">
+            Partner restaurant menus with declared ingredients and preparation guidelines.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl border border-[#E3E1D5] p-6 shadow-xs">
+            <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-[#E9F0E9] text-[#244E3B] font-bold flex items-center justify-center">
+                        JR
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-[#233D32]">The Juniper Room</h2>
+                        <div class="text-xs text-[#738078]">1840 Union St, San Francisco, CA</div>
+                    </div>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#EAF5EE] text-[#247847]">
+                    Linked & Active
+                </span>
+            </div>
+            <p class="text-xs text-[#64746B] mb-4">
+                Seasonal contemporary California dining with verified ingredients and allergen cross-contact protocols.
+            </p>
+            <div class="flex items-center justify-between pt-3 border-t border-[#E8E7DF] text-xs">
+                <span class="text-[#738078]">5 menu dishes active</span>
+                <a href="events/studio-team-dinner/menu" class="font-semibold text-[#244E3B] hover:underline">
+                    View dishes & pre-orders →
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
