@@ -1,0 +1,254 @@
+@page "/events/studio-team-dinner/menu"
+@page "/events/{id}/menu"
+@inject NavigationManager Navigation
+@inject DiningCoordinatorService DiningService
+@implements IDisposable
+
+@{
+    var ev = DiningService.CurrentEvent;
+
+    IEnumerable<MenuItem> displayedDishes = ev.Menu;
+    if (activeMenuFilter == "vegetarian")
+    {
+        displayedDishes = ev.Menu.Where(m => m.Name.Contains("risotto", StringComparison.OrdinalIgnoreCase) || m.Name.Contains("vegetable", StringComparison.OrdinalIgnoreCase));
+    }
+    else if (activeMenuFilter == "no-shellfish")
+    {
+        displayedDishes = ev.Menu.Where(m => !m.DeclaredAllergens.Any(a => a.Equals("shellfish", StringComparison.OrdinalIgnoreCase)));
+    }
+}
+
+<div class="max-w-7xl mx-auto px-6 py-8">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div>
+            <div class="text-[11px] font-bold tracking-wider text-[#738078] uppercase mb-1">
+                @ev.Title.ToUpper() / THU, OCT 22, 2026
+            </div>
+            <h1 class="text-3xl font-bold text-[#233D32] tracking-tight">
+                Good choices, all in one place.
+            </h1>
+            <p class="text-xs text-[#738078] mt-1">
+                Dinner menu · @ev.VenueName · Linked and reviewed Oct 19, 2026
+            </p>
+        </div>
+        <div>
+            <button @onclick="RefreshMenu" class="inline-flex items-center gap-2 px-4 py-2 border border-[#D5D3C4] bg-white hover:bg-neutral-50 text-[#233D32] text-xs font-semibold rounded-xl shadow-xs transition">
+                <svg class="w-3.5 h-3.5 text-[#738078]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <span>Refresh linked menu</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Sub Navigation Tabs -->
+    <EventTabs ActiveTab="menu" />
+
+    <!-- Filter Pills -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 text-xs">
+        <div class="flex items-center gap-2">
+            <button @onclick='() => activeMenuFilter = "all"' class="px-3.5 py-1.5 rounded-full font-semibold transition @(activeMenuFilter == "all" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
+                All dishes · @ev.Menu.Count
+            </button>
+            <button @onclick='() => activeMenuFilter = "vegetarian"' class="px-3.5 py-1.5 rounded-full font-semibold transition @(activeMenuFilter == "vegetarian" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
+                Vegetarian
+            </button>
+            <button @onclick='() => activeMenuFilter = "no-shellfish"' class="px-3.5 py-1.5 rounded-full font-semibold transition @(activeMenuFilter == "no-shellfish" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
+                Hide shellfish ingredients
+            </button>
+        </div>
+        <div class="text-[11px] text-[#738078] font-medium">
+            6 mains + 2 shared sides selected
+        </div>
+    </div>
+
+    <!-- Dishes Catalog Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        @foreach (var dish in displayedDishes.Where(d => d.Category != "Appetizer"))
+        {
+            var isCurrentActive = selectedDish?.Id == dish.Id;
+            var selections = ev.PreOrders.Where(p => p.MenuItemId == dish.Id).ToList();
+            var guestNames = ev.Guests.Where(g => selections.Any(s => s.GuestId == g.Id)).Select(g => g.Name.Split(' ')[0]);
+
+            <div class="bg-white rounded-2xl border @(isCurrentActive ? "border-[#244E3B] ring-1 ring-[#244E3B]" : "border-[#E3E1D5]") shadow-xs overflow-hidden cursor-pointer hover:border-[#244E3B] transition"
+                 @onclick="() => SelectDish(dish)">
+                <div class="h-44 bg-cover bg-center" style="background-image: url('@dish.ImageUrl');"></div>
+                <div class="p-5">
+                    <div class="flex items-start justify-between mb-1.5">
+                        <h3 class="text-base font-bold text-[#233D32]">@dish.Name</h3>
+                        <span class="text-base font-bold text-[#233D32]">$@dish.Price.ToString("0.##")</span>
+                    </div>
+                    <p class="text-xs text-[#738078] mb-4">@dish.Description</p>
+
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#E8E7DF]">
+                        <div>
+                            @if (dish.Name.Contains("risotto", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#EAF5EE] text-[#247847]">
+                                    Vegetarian with changes
+                                </span>
+                            }
+                            else if (dish.Name.Contains("chicken", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#FFF8EC] text-[#945900]">
+                                    Low-sodium request
+                                </span>
+                            }
+                            else if (dish.Name.Contains("salmon", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#FFF8EC] text-[#945900]">
+                                    Cross-contact review
+                                </span>
+                            }
+                            else if (dish.Name.Contains("vegetables", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#EAF5EE] text-[#247847]">
+                                    Vegetarian
+                                </span>
+                            }
+                        </div>
+
+                        <div class="text-[11px] text-[#738078]">
+                            @if (dish.IsSharedDish)
+                            {
+                                <span>2 bowls · Shared by all 6</span>
+                            }
+                            else
+                            {
+                                <span>@selections.Count selected · @(string.Join(", ", guestNames))</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Compact Appetizer Card (Shrimp Toast) -->
+    @foreach (var dish in displayedDishes.Where(d => d.Category == "Appetizer"))
+    {
+        <div class="bg-white rounded-xl border border-[#E3E1D5] p-4 shadow-xs flex items-center justify-between mb-6 cursor-pointer hover:border-[#244E3B] transition"
+             @onclick="() => SelectDish(dish)">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-[#FAF9F5] border border-[#E3E1D5] flex items-center justify-center text-[#738078]">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-[#233D32]">@dish.Name · $@dish.Price.ToString("0.##")</div>
+                    <div class="text-[11px] text-[#738078]">@dish.Description · 0 selected</div>
+                </div>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#FDF0ED] text-[#BC3A2B]">
+                Contains shellfish
+            </span>
+        </div>
+    }
+
+    <!-- Alert Banner -->
+    <div class="p-4 bg-[#FFF8EC] border border-[#F6D8A6] rounded-xl text-xs text-[#945900] mb-8 flex items-start gap-3">
+        <svg class="w-4 h-4 text-[#945900] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <p class="leading-relaxed">
+            <span class="font-bold">Filters are a starting point, not an allergy guarantee.</span>
+            Removing dishes with shellfish ingredients does not remove cross-contact risk. Check the kitchen's preparation process.
+        </p>
+    </div>
+
+    <!-- Guest Pre-orders Section -->
+    <div class="bg-white rounded-2xl border border-[#E3E1D5] p-6 shadow-xs">
+        <div class="mb-5 pb-3 border-b border-[#E8E7DF] flex items-center justify-between">
+            <div>
+                <h2 class="text-base font-bold text-[#233D32]">Guest pre-orders</h2>
+                <p class="text-xs text-[#738078]">All 6 saved · Changes remain open until Tue, Oct 20 at 5:00 PM</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+            @foreach (var guest in ev.Guests)
+            {
+                var preOrder = ev.PreOrders.FirstOrDefault(p => p.GuestId == guest.Id);
+                var dish = preOrder != null ? ev.Menu.FirstOrDefault(m => m.Id == preOrder.MenuItemId) : null;
+                var dishCost = dish?.Price ?? 0;
+
+                <div class="p-4 bg-[#F7F6F0] rounded-xl border border-[#E3E1D5] flex flex-col justify-between cursor-pointer hover:border-[#244E3B] transition"
+                     @onclick="() => OpenGuestDrawer(guest, dish)">
+                    <div>
+                        <div class="w-7 h-7 rounded-full bg-[#E9F0E9] text-[#244E3B] font-semibold text-xs flex items-center justify-center mb-2">
+                            @guest.Initials
+                        </div>
+                        <div class="text-xs font-bold text-[#233D32] mb-1">@guest.Name</div>
+                        <div class="text-xs font-semibold text-[#244E3B] mb-1">
+                            @(dish?.Name ?? "No choice yet")
+                        </div>
+                        <div class="text-[11px] text-[#738078] mb-3 leading-normal">
+                            @(preOrder?.SpecialPrepSummary ?? "Standard preparation")
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs font-bold text-[#233D32] mb-2">
+                            $@dishCost.ToString("0.00") + $4 shared
+                        </div>
+                        @if (preOrder != null && preOrder.HasKitchenPending)
+                        {
+                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-[#FFF8EC] text-[#945900]">
+                                Kitchen pending
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-[#EDECE6] text-[#5A6860]">
+                                Saved
+                            </span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<DishEditDrawer IsOpen="isDrawerOpen" SelectedDish="selectedDish" InitialGuestId="drawerGuestId" OnClose="CloseDrawer" />
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private string activeMenuFilter = "all";
+    private bool isDrawerOpen = false;
+    private MenuItem? selectedDish;
+    private string? drawerGuestId;
+
+    protected override void OnInitialized()
+    {
+        DiningService.OnChange += StateHasChanged;
+        selectedDish = DiningService.CurrentEvent.Menu.FirstOrDefault(m => m.Name.Contains("salmon", StringComparison.OrdinalIgnoreCase)) ?? DiningService.CurrentEvent.Menu.FirstOrDefault();
+    }
+
+    public void Dispose()
+    {
+        DiningService.OnChange -= StateHasChanged;
+    }
+
+    private void SelectDish(MenuItem dish)
+    {
+        selectedDish = dish;
+        drawerGuestId = "guest-alex";
+        isDrawerOpen = true;
+    }
+
+    private void OpenGuestDrawer(Guest guest, MenuItem? dish)
+    {
+        selectedDish = dish ?? DiningService.CurrentEvent.Menu.FirstOrDefault();
+        drawerGuestId = guest.Id;
+        isDrawerOpen = true;
+    }
+
+    private void CloseDrawer()
+    {
+        isDrawerOpen = false;
+    }
+
+    private void RefreshMenu()
+    {
+        DiningService.InitializeSeedData();
+    }
+}
+

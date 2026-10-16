@@ -1,0 +1,187 @@
+@inject DiningCoordinatorService DiningService
+
+@if (IsOpen && SelectedDish != null)
+{
+    <!-- Drawer backdrop on mobile -->
+    <div class="fixed inset-0 z-40 bg-black/20 lg:hidden" @onclick="Close"></div>
+
+    <!-- Slide-over Drawer / Panel -->
+    <div class="fixed top-14 right-0 bottom-0 w-full max-w-sm lg:max-w-md bg-white border-l border-[#E3E1D5] shadow-xl z-40 flex flex-col justify-between overflow-y-auto animate-slide-left p-6">
+        <div>
+            <!-- Header -->
+            <div class="flex items-center justify-between pb-4 border-b border-[#E8E7DF] mb-4">
+                <span class="text-[10px] font-bold tracking-wider uppercase text-[#738078]">Dish Details / Edit Pre-order</span>
+                <button @onclick="Close" class="w-7 h-7 rounded-full hover:bg-black/5 flex items-center justify-center text-[#738078] hover:text-[#233D32]">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Dish Title & Price -->
+            <div class="flex items-start justify-between mb-2">
+                <h2 class="text-xl font-bold text-[#233D32]">@SelectedDish.Name</h2>
+                <span class="text-xl font-bold text-[#233D32]">$@SelectedDish.Price.ToString("0.##")</span>
+            </div>
+            <p class="text-xs text-[#64746B] mb-5 leading-relaxed">@SelectedDish.Description</p>
+
+            <!-- Ingredients & Declared Allergens -->
+            <div class="mb-5 pb-5 border-b border-[#E8E7DF]">
+                <div class="text-[11px] font-semibold text-[#233D32] mb-1.5">Ingredients & declared allergens</div>
+                <div class="text-xs text-[#738078] leading-relaxed mb-3">
+                    @(string.Join(", ", SelectedDish.Ingredients))
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                    @foreach (var all in SelectedDish.DeclaredAllergens)
+                    {
+                        <span class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-[#F0EFE5] text-[#233D32]">
+                            Contains @all
+                        </span>
+                    }
+                    @if (SelectedDish.DeclaredAllergens.Count == 0)
+                    {
+                        <span class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-[#EAF5EE] text-[#247847]">
+                            No major declared allergens
+                        </span>
+                    }
+                </div>
+            </div>
+
+            <!-- Guest Target Selector -->
+            <div class="mb-5">
+                <label class="block text-[11px] font-semibold text-[#738078] uppercase mb-1.5">Editing pre-order for</label>
+                <div class="flex items-center gap-3 p-3 bg-[#F7F6F0] rounded-xl border border-[#E3E1D5]">
+                    <div class="w-8 h-8 rounded-full bg-[#E9F0E9] text-[#244E3B] font-semibold text-xs flex items-center justify-center shrink-0">
+                        @SelectedGuest?.Initials
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <select @bind="selectedGuestId" @bind:after="OnGuestChanged" class="w-full bg-transparent font-semibold text-xs text-[#233D32] focus:outline-none">
+                            @foreach (var g in DiningService.CurrentEvent.Guests)
+                            {
+                                <option value="@g.Id">@g.Name @(g.DietaryProfile.HasAllergies ? $"({g.DietaryProfile.Summary})" : "")</option>
+                            }
+                        </select>
+                        <div class="text-[11px] text-[#738078] truncate">
+                            @(SelectedGuest?.DietaryProfile.Summary ?? "No restrictions")
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Allergy / Cross-contact Warning -->
+            @if (SelectedGuest != null && SelectedGuest.DietaryProfile.HasSevereAllergy)
+            {
+                <div class="p-3.5 bg-[#FFF8EC] border border-[#F6D8A6] rounded-xl text-xs text-[#945900] mb-5 leading-relaxed">
+                    <div class="font-semibold flex items-center gap-1.5 mb-1">
+                        <svg class="w-4 h-4 text-[#945900] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        <span>Kitchen confirmation pending</span>
+                    </div>
+                    No shellfish is listed, but the kitchen handles shrimp. Separate preparation is not yet confirmed.
+                </div>
+            }
+
+            <!-- Requested Modifications -->
+            <div class="mb-5">
+                <div class="text-[11px] font-semibold text-[#233D32] mb-2.5">Requested modifications</div>
+                <div class="space-y-2 text-xs">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" @bind="modPan" class="rounded text-[#244E3B] focus:ring-[#244E3B] w-4 h-4 accent-[#244E3B]" />
+                        <span class="text-[#233D32]">Separate pan & clean utensils</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" @bind="modArea" class="rounded text-[#244E3B] focus:ring-[#244E3B] w-4 h-4 accent-[#244E3B]" />
+                        <span class="text-[#233D32]">Separate prep area from allergens</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" @bind="modSauce" class="rounded text-[#244E3B] focus:ring-[#244E3B] w-4 h-4 accent-[#244E3B]" />
+                        <span class="text-[#233D32]">Sauce served on the side / no added salt</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Kitchen Note -->
+            <div class="mb-5">
+                <label class="block text-[11px] font-semibold text-[#233D32] mb-1.5">Kitchen note</label>
+                <textarea @bind="kitchenNote" rows="2" class="w-full text-xs p-3 rounded-lg border border-[#D5D3C4] focus:outline-none focus:ring-1 focus:ring-[#244E3B] focus:border-[#244E3B] bg-white" placeholder="Special dietary prep instructions..."></textarea>
+            </div>
+        </div>
+
+        <!-- Quantity & Save Footer -->
+        <div class="pt-4 border-t border-[#E8E7DF]">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-xs font-semibold text-[#233D32]">Quantity</span>
+                <div class="flex items-center gap-3 bg-[#F7F6F0] border border-[#E3E1D5] rounded-lg px-3 py-1">
+                    <button @onclick="() => { if(quantity > 1) quantity--; }" class="text-[#738078] hover:text-[#233D32] font-bold text-sm px-1.5 disabled:opacity-30" disabled="@(quantity <= 1)">-</button>
+                    <span class="text-xs font-semibold text-[#233D32] w-4 text-center">@quantity</span>
+                    <button @onclick="() => quantity++" class="text-[#738078] hover:text-[#233D32] font-bold text-sm px-1.5">+</button>
+                </div>
+                <span class="text-sm font-bold text-[#233D32]">$@((SelectedDish.Price * quantity).ToString("0.00"))</span>
+            </div>
+
+            <button @onclick="SaveChanges" class="w-full py-3 bg-[#244E3B] hover:bg-[#1B3D2E] text-white font-semibold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 mb-2">
+                <span>Save @(SelectedGuest?.Name.Split(' ')[0])'s changes</span>
+            </button>
+            <div class="text-[10px] text-center text-[#738078]">Preparation requests do not count as kitchen confirmation.</div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public MenuItem? SelectedDish { get; set; }
+    [Parameter] public string? InitialGuestId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string selectedGuestId = string.Empty;
+    private Guest? SelectedGuest => DiningService.CurrentEvent.Guests.FirstOrDefault(g => g.Id == selectedGuestId);
+    private int quantity = 1;
+    private bool modPan = true;
+    private bool modArea = true;
+    private bool modSauce = false;
+    private string kitchenNote = "Please confirm oil and sauces have no shellfish contact.";
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(selectedGuestId) || !DiningService.CurrentEvent.Guests.Any(g => g.Id == selectedGuestId))
+        {
+            selectedGuestId = InitialGuestId ?? DiningService.CurrentEvent.Guests.FirstOrDefault()?.Id ?? string.Empty;
+        }
+        LoadGuestPreOrder();
+    }
+
+    private void OnGuestChanged()
+    {
+        LoadGuestPreOrder();
+    }
+
+    private void LoadGuestPreOrder()
+    {
+        var existing = DiningService.CurrentEvent.PreOrders.FirstOrDefault(p => p.GuestId == selectedGuestId);
+        if (existing != null)
+        {
+            quantity = existing.Quantity;
+            kitchenNote = existing.KitchenNote;
+            modPan = existing.Modifications.Any(m => m.Contains("pan", StringComparison.OrdinalIgnoreCase));
+            modArea = existing.Modifications.Any(m => m.Contains("area", StringComparison.OrdinalIgnoreCase));
+            modSauce = existing.Modifications.Any(m => m.Contains("sauce", StringComparison.OrdinalIgnoreCase) || m.Contains("salt", StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private async Task SaveChanges()
+    {
+        if (SelectedDish != null && !string.IsNullOrEmpty(selectedGuestId))
+        {
+            var mods = new List<string>();
+            if (modPan) mods.Add("Separate pan & clean utensils");
+            if (modArea) mods.Add("Separate prep area from allergens");
+            if (modSauce) mods.Add("Sauce on side / no added salt");
+
+            DiningService.UpdateGuestPreOrder(selectedGuestId, SelectedDish.Id, quantity, mods, kitchenNote);
+        }
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+}
+
