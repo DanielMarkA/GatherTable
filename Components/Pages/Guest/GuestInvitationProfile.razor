@@ -1,0 +1,255 @@
+@page "/j/{code}"
+@page "/guest/{guestId}"
+@inject NavigationManager Navigation
+@inject DiningCoordinatorService DiningService
+@implements IDisposable
+
+@{
+    var ev = DiningService.CurrentEvent;
+    var guest = GetTargetGuest();
+}
+
+<div class="min-h-screen bg-[#F7F6F0] py-8 px-4 flex justify-center text-[#233D32]">
+    <div class="max-w-md w-full bg-white rounded-3xl border border-[#E3E1D5] shadow-sm p-6 sm:p-8 flex flex-col justify-between">
+        <div>
+            <!-- Top App Bar -->
+            <div class="flex items-center justify-between pb-4 border-b border-[#E8E7DF] mb-5">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-[#244E3B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"/>
+                        <path d="M15 2v14"/>
+                        <path d="M6 2v20"/>
+                        <path d="M4 2v4a2 2 0 0 0 4 0V2"/>
+                    </svg>
+                    <span class="font-bold text-sm tracking-tight text-[#233D32]">GatherTable</span>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#EDECE6] text-[#5A6860]">
+                    Guest link
+                </span>
+            </div>
+
+            <!-- Stepper -->
+            <div class="flex items-center justify-between text-xs font-semibold text-[#738078] mb-6">
+                <span class="text-[#244E3B] border-b-2 border-[#244E3B] pb-1">01 Join & dietary profile</span>
+                <span class="text-[#A0A8A3]">02 Your pre-order</span>
+            </div>
+
+            <!-- Greeting -->
+            <h1 class="text-2xl font-bold tracking-tight text-[#233D32] mb-1">
+                You're invited, @(guest?.Name.Split(' ')[0] ?? "friend").
+            </h1>
+            <p class="text-xs text-[#738078] mb-6">Good company starts with a seat for you.</p>
+
+            <!-- Event Card (Dark Green) -->
+            <div class="bg-[#244E3B] text-white rounded-2xl p-5 mb-6 shadow-xs">
+                <div class="flex items-center gap-2 text-xs text-white/80 mb-3">
+                    <span class="w-6 h-6 rounded-full bg-white/20 font-semibold text-[10px] flex items-center justify-center">MC</span>
+                    <span>@ev.HostName invited you to</span>
+                </div>
+
+                <h2 class="text-xl font-bold tracking-tight mb-3">@ev.Title</h2>
+
+                <div class="space-y-1 text-xs text-white/90 mb-4">
+                    <div class="flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                        <span>@ev.VenueName</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span>Thu, Oct 22 · 7:00 PM PT</span>
+                    </div>
+                    <div class="text-[11px] text-white/70 pt-0.5">@ev.VenueAddress · @ev.TableInfo</div>
+                </div>
+
+                <p class="text-[11px] text-white/80 italic border-t border-white/20 pt-2.5">
+                    "@ev.HostNotes"
+                </p>
+            </div>
+
+            <!-- RSVP Section -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="text-xs font-bold text-[#233D32]">Your seat at the table</label>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#EAF5EE] text-[#247847]">RSVP confirmed</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <button @onclick="() => rsvpGoing = true" class="py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition @(rsvpGoing ? "bg-[#244E3B] text-white" : "border border-[#D5D3C4] text-[#233D32] hover:bg-neutral-50")">
+                        <span>✓ Going</span>
+                    </button>
+                    <button @onclick="() => rsvpGoing = false" class="py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition @(!rsvpGoing ? "bg-[#244E3B] text-white" : "border border-[#D5D3C4] text-[#233D32] hover:bg-neutral-50")">
+                        <span>Can't make it</span>
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold text-[#738078] mb-1">Your name</label>
+                    <input type="text" @bind="guestName" class="w-full text-xs p-3 rounded-xl border border-[#D5D3C4] bg-white font-medium text-[#233D32]" />
+                </div>
+            </div>
+
+            <!-- Dietary Needs Section -->
+            <div class="mb-6 pt-4 border-t border-[#E8E7DF]">
+                <h3 class="text-sm font-bold text-[#233D32] mb-1">Let's look after your needs.</h3>
+                <p class="text-xs text-[#738078] mb-4">Allergies and preferences are different. Tell us which details the kitchen needs to know.</p>
+
+                <!-- Food Allergies -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-[#233D32]">Food allergies</span>
+                        <button class="text-xs font-semibold text-[#244E3B] hover:underline">+ Add allergy</button>
+                    </div>
+
+                    @if (hasShellfish)
+                    {
+                        <div class="p-3.5 bg-[#FAF9F5] border border-[#E3E1D5] rounded-xl space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-[#BC3A2B]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                    <span class="text-xs font-bold text-[#233D32]">Shellfish</span>
+                                </div>
+                                <button @onclick="() => hasShellfish = false" class="text-xs text-[#738078] hover:text-[#233D32]">✕</button>
+                            </div>
+
+                            <div>
+                                <span class="text-[10px] font-semibold text-[#738078] block mb-1.5">Reaction severity</span>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button @onclick="() => severity = AllergySeverity.Mild" class="py-1.5 rounded-lg text-xs font-medium border @(severity == AllergySeverity.Mild ? "bg-[#EDECE6] border-[#244E3B] font-bold" : "border-[#D5D3C4] bg-white")">
+                                        Mild
+                                    </button>
+                                    <button @onclick="() => severity = AllergySeverity.Moderate" class="py-1.5 rounded-lg text-xs font-medium border @(severity == AllergySeverity.Moderate ? "bg-[#EDECE6] border-[#244E3B] font-bold" : "border-[#D5D3C4] bg-white")">
+                                        Moderate
+                                    </button>
+                                    <button @onclick="() => severity = AllergySeverity.Severe" class="py-1.5 rounded-lg text-xs font-medium border @(severity == AllergySeverity.Severe ? "bg-[#FDF0ED] border-[#BC3A2B] text-[#BC3A2B] font-bold" : "border-[#D5D3C4] bg-white")">
+                                        Severe
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p class="text-[11px] text-[#BC3A2B] leading-tight">
+                                Severe reaction, including breathing difficulty. Cross-contact precautions are essential.
+                            </p>
+                        </div>
+                    }
+                </div>
+
+                <!-- Alert Warning -->
+                <div class="p-3 bg-[#FFF8EC] border border-[#F6D8A6] rounded-xl text-xs text-[#945900] mb-4 flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-[#945900] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <div class="leading-relaxed">
+                        <div class="font-bold">The kitchen must confirm handling.</div>
+                        We flag potential conflicts, but cannot guarantee an allergy-safe meal. Your host will follow up with the restaurant.
+                    </div>
+                </div>
+
+                <!-- Dietary Preferences Checkboxes -->
+                <div class="mb-4">
+                    <span class="text-xs font-bold text-[#233D32] block mb-1">Dietary preferences</span>
+                    <span class="text-[11px] text-[#738078] block mb-2">Optional · None selected for your profile</span>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="p-2.5 rounded-xl border border-[#D5D3C4] bg-white flex items-center gap-2 cursor-pointer text-xs">
+                            <input type="checkbox" @bind="prefVegetarian" class="rounded text-[#244E3B] focus:ring-[#244E3B] accent-[#244E3B]" />
+                            <span>Vegetarian</span>
+                        </label>
+                        <label class="p-2.5 rounded-xl border border-[#D5D3C4] bg-white flex items-center gap-2 cursor-pointer text-xs">
+                            <input type="checkbox" @bind="prefLowSodium" class="rounded text-[#244E3B] focus:ring-[#244E3B] accent-[#244E3B]" />
+                            <span>Low sodium</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Special Note to Kitchen -->
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-[#233D32] mb-1">Anything else the kitchen should know?</label>
+                    <textarea @bind="guestNotes" rows="3" class="w-full text-xs p-3 rounded-xl border border-[#D5D3C4] bg-white text-[#233D32] leading-relaxed" placeholder="Mention epinephrine, severe cross-contact sensitivities, or special prep..."></textarea>
+                </div>
+
+                <div class="flex items-center gap-1.5 text-[11px] text-[#738078]">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <span>Shared only with Maya and the restaurant to help coordinate your meal.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button & Footer -->
+        <div class="pt-4 border-t border-[#E8E7DF]">
+            <button @onclick="SaveAndContinue" class="w-full py-3.5 bg-[#244E3B] hover:bg-[#1B3D2E] text-white font-semibold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 mb-3">
+                <span>Save profile & browse menu</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </button>
+            <div class="text-center text-[10px] text-[#738078] space-y-1">
+                <div>Update your choices until Tue, Oct 20 at 5:00 PM PT</div>
+                <div class="flex items-center justify-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <span>Private event · No account needed</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Code { get; set; }
+    [Parameter] public string? GuestId { get; set; }
+
+    private bool rsvpGoing = true;
+    private string guestName = "Alex Rivera";
+    private bool hasShellfish = true;
+    private AllergySeverity severity = AllergySeverity.Severe;
+    private bool prefVegetarian = false;
+    private bool prefLowSodium = false;
+    private string guestNotes = "I carry epinephrine. Please use a separate pan, clean utensils and a separate prep area away from shellfish.";
+
+    protected override void OnInitialized()
+    {
+        var target = GetTargetGuest();
+        if (target != null)
+        {
+            guestName = target.Name;
+            rsvpGoing = target.Rsvp == RsvpStatus.Going;
+            hasShellfish = target.DietaryProfile.Allergies.Any(a => a.Allergen.Equals("Shellfish", StringComparison.OrdinalIgnoreCase));
+            if (hasShellfish)
+            {
+                severity = target.DietaryProfile.Allergies.First(a => a.Allergen.Equals("Shellfish", StringComparison.OrdinalIgnoreCase)).Severity;
+            }
+            prefVegetarian = target.DietaryProfile.Preferences.Contains("Vegetarian");
+            prefLowSodium = target.DietaryProfile.Preferences.Contains("Low sodium");
+            guestNotes = target.DietaryProfile.Notes;
+        }
+    }
+
+    public void Dispose()
+    {
+    }
+
+    private Guest? GetTargetGuest()
+    {
+        if (!string.IsNullOrEmpty(GuestId))
+        {
+            return DiningService.CurrentEvent.Guests.FirstOrDefault(g => g.Id == GuestId);
+        }
+        return DiningService.CurrentEvent.Guests.FirstOrDefault(g => g.Name.Contains("Alex")) ?? DiningService.CurrentEvent.Guests.FirstOrDefault();
+    }
+
+    private void SaveAndContinue()
+    {
+        var target = GetTargetGuest();
+        if (target != null)
+        {
+            var allergies = new List<FoodAllergy>();
+            if (hasShellfish)
+            {
+                allergies.Add(new FoodAllergy { Allergen = "Shellfish", Severity = severity, Details = "Severe allergy" });
+            }
+
+            var prefs = new List<string>();
+            if (prefVegetarian) prefs.Add("Vegetarian");
+            if (prefLowSodium) prefs.Add("Low sodium");
+
+            DiningService.UpdateGuestRsvpAndProfile(target.Id, rsvpGoing ? RsvpStatus.Going : RsvpStatus.CantMakeIt, guestName, allergies, prefs, guestNotes);
+        }
+
+        Navigation.NavigateTo($"j/{Code ?? "studio-oct22"}/menu");
+    }
+}
+
