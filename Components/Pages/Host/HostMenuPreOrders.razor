@@ -22,17 +22,17 @@
                 Good choices, all in one place.
             </h1>
             <p class="text-xs text-[#738078] mt-1">
-                Dinner menu · @ev.VenueName · Supabase-backed catalog with real-time updates & soft delete
+                Dinner menu · @ev.VenueName · Linked & actively synchronized
             </p>
         </div>
         <div class="flex items-center gap-2">
-            <button @onclick="() => showAddForm = !showAddForm" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#244E3B] hover:bg-[#1B3D2E] text-white text-xs font-semibold rounded-xl shadow-xs transition">
+            <button type="button" @onclick="OpenAddModal" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#244E3B] hover:bg-[#1B3D2E] text-white text-xs font-semibold rounded-xl shadow-xs transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                <span>@(showAddForm ? "Close Form" : "Add Dish")</span>
+                <span>Add dish</span>
             </button>
-            <button @onclick="LoadDishesFromSupabase" disabled="@isDbLoading" class="inline-flex items-center gap-2 px-3.5 py-2 border border-[#D5D3C4] bg-white hover:bg-neutral-50 text-[#233D32] text-xs font-semibold rounded-xl shadow-xs transition disabled:opacity-50">
+            <button type="button" @onclick="LoadDishesFromSupabase" disabled="@isDbLoading" class="inline-flex items-center gap-2 px-3.5 py-2 border border-[#D5D3C4] bg-white hover:bg-neutral-50 text-[#233D32] text-xs font-semibold rounded-xl shadow-xs transition disabled:opacity-50">
                 <svg class="w-3.5 h-3.5 text-[#738078] @(isDbLoading ? "animate-spin" : "")" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                <span>@(isDbLoading ? "Loading..." : "Refresh DB")</span>
+                <span>@(isDbLoading ? "Refreshing..." : "Refresh")</span>
             </button>
         </div>
     </div>
@@ -40,207 +40,194 @@
     <!-- Sub Navigation Tabs -->
     <EventTabs ActiveTab="menu" />
 
-    <!-- Database Connection Banner & Soft Delete Status -->
-    <div class="mb-6 p-4 rounded-2xl border @(dbConnected ? "bg-[#F3F8F5] border-[#D0E6D8] text-[#1D5E3A]" : "bg-[#FFF9F2] border-[#F2DECE] text-[#9E4A10]") flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
-        <div class="flex items-center gap-2.5">
-            <span class="w-2.5 h-2.5 rounded-full @(dbConnected ? "bg-[#2ECC71] animate-pulse" : "bg-[#F39C12]")"></span>
-            <div>
-                <span class="font-bold">Database:</span> @dbStatusText
-                <span class="text-[11px] opacity-75 ml-1">(Table: <code class="font-mono">public.menu_items</code> · Filtered by <code class="font-mono">deleted_at is null</code>)</span>
+    <!-- Filters & View Mode Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 text-xs">
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- Active vs Archived Catalog View -->
+            <div class="inline-flex bg-[#EAE8DD] p-0.5 rounded-full border border-[#D5D3C4] mr-2">
+                <button type="button" @onclick="() => SetViewMode(false)" class="px-3 py-1 rounded-full font-semibold transition text-xs @(!showArchived ? "bg-[#233D32] text-white shadow-xs" : "text-[#5A6860] hover:text-[#233D32]")">
+                    Active (@activeCount)
+                </button>
+                <button type="button" @onclick="() => SetViewMode(true)" class="px-3 py-1 rounded-full font-semibold transition text-xs @(showArchived ? "bg-[#233D32] text-white shadow-xs" : "text-[#5A6860] hover:text-[#233D32]")">
+                    Archived (@archivedCount)
+                </button>
             </div>
-        </div>
-        <div class="flex items-center gap-3 font-medium">
-            <span>Active: <strong>@DisplayedDishes.Count()</strong></span>
-            @if (softDeletedCount > 0)
+
+            <!-- Dietary Tag Filters -->
+            @if (!showArchived)
             {
-                <span class="text-[#BC3A2B] bg-white/80 px-2.5 py-0.5 rounded-full border border-red-200">
-                    Soft deleted: <strong>@softDeletedCount</strong>
-                </span>
+                <button type="button" @onclick='() => activeMenuFilter = "all"' class="px-3 py-1 rounded-full font-medium transition @(activeMenuFilter == "all" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
+                    All
+                </button>
+                <button type="button" @onclick='() => activeMenuFilter = "vegetarian"' class="px-3 py-1 rounded-full font-medium transition @(activeMenuFilter == "vegetarian" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
+                    Vegetarian
+                </button>
+                <button type="button" @onclick='() => activeMenuFilter = "no-shellfish"' class="px-3 py-1 rounded-full font-medium transition @(activeMenuFilter == "no-shellfish" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
+                    Hide shellfish
+                </button>
+            }
+        </div>
+
+        <div class="text-[11px] text-[#738078] font-medium">
+            @if (showArchived)
+            {
+                <span>Archived dishes retain history and can be restored at any time</span>
+            }
+            else
+            {
+                <span>@DisplayedDishes.Count() dishes displayed</span>
             }
         </div>
     </div>
 
-    <!-- Step 7: Create Form (Disabled while saving to prevent duplicate POSTs) -->
-    @if (showAddForm)
+    <!-- Active Dishes Grid -->
+    @if (!showArchived)
     {
-        <div class="mb-6 bg-white rounded-2xl border border-[#244E3B]/30 p-5 shadow-sm animate-fade-in">
-            <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#E8E7DF]">
-                <div class="text-xs font-bold text-[#233D32] uppercase tracking-wider">
-                    Add New Dish to Supabase Database (POST /rest/v1/menu_items)
-                </div>
-                <span class="text-[11px] text-[#738078]">Step 7 of Milestone</span>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                <div>
-                    <label class="block text-[11px] font-semibold text-[#738078] mb-1">Dish Name *</label>
-                    <input @bind="newName" placeholder="e.g. Pan-seared Halibut" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none" />
-                </div>
-                <div>
-                    <label class="block text-[11px] font-semibold text-[#738078] mb-1">Price ($) *</label>
-                    <input @bind="newPrice" type="number" step="0.50" min="0" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none" />
-                </div>
-                <div>
-                    <label class="block text-[11px] font-semibold text-[#738078] mb-1">Category</label>
-                    <select @bind="newCategory" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] bg-white focus:border-[#244E3B] focus:outline-none">
-                        <option value="Main">Main Course</option>
-                        <option value="SharedSide">Shared Side</option>
-                        <option value="Appetizer">Appetizer</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-[11px] font-semibold text-[#738078] mb-1">Allergens (csv)</label>
-                    <input @bind="newAllergens" placeholder="e.g. fish, dairy" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none" />
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <label class="block text-[11px] font-semibold text-[#738078] mb-1">Description & Ingredients</label>
-                <input @bind="newDescription" placeholder="Description of the dish, preparation, and garnishes" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none" />
-            </div>
-
-            <div class="flex items-center justify-end gap-2 pt-2">
-                <button type="button" @onclick="() => showAddForm = false" class="px-3.5 py-1.5 border border-[#D5D3C4] text-xs font-semibold rounded-xl text-[#738078] hover:bg-neutral-50 transition">
-                    Cancel
-                </button>
-                <button type="button" @onclick="AddDish" disabled="@(saving || string.IsNullOrWhiteSpace(newName))" class="px-4 py-1.5 bg-[#244E3B] hover:bg-[#1B3D2E] text-white text-xs font-semibold rounded-xl shadow-xs transition disabled:opacity-50 flex items-center gap-1.5">
-                    @if (saving)
-                    {
-                        <svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                        <span>Saving row...</span>
-                    }
-                    else
-                    {
-                        <span>Save to Supabase</span>
-                    }
-                </button>
-            </div>
-        </div>
-    }
-
-    <!-- Filter Pills (Step 6 / Habit 2) -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 text-xs">
-        <div class="flex items-center gap-2">
-            <button @onclick='() => SetFilter("all")' class="px-3.5 py-1.5 rounded-full font-semibold transition @(activeMenuFilter == "all" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
-                All dishes · @DisplayedDishes.Count()
-            </button>
-            <button @onclick='() => SetFilter("vegetarian")' class="px-3.5 py-1.5 rounded-full font-semibold transition @(activeMenuFilter == "vegetarian" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
-                Vegetarian
-            </button>
-            <button @onclick='() => SetFilter("no-shellfish")' class="px-3.5 py-1.5 rounded-full font-semibold transition @(activeMenuFilter == "no-shellfish" ? "bg-[#233D32] text-white" : "bg-white text-[#738078] border border-[#E3E1D5] hover:bg-neutral-50")">
-                Hide shellfish ingredients
-            </button>
-        </div>
-        <div class="text-[11px] text-[#738078] font-medium">
-            Fast habits applied: Index ordering, range limit (0..49), database-side soft delete filter
-        </div>
-    </div>
-
-    <!-- Dishes Catalog Grid (Step 6 Read, Step 8 Update & Delete) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        @foreach (var dish in DisplayedDishes.Where(d => d.Category != "Appetizer"))
+        @if (!DisplayedDishes.Any())
         {
-            var isCurrentActive = selectedDish?.Id == dish.Id;
-            var selections = ev.PreOrders.Where(p => p.MenuItemId == dish.Id).ToList();
-            var guestNames = ev.Guests.Where(g => selections.Any(s => s.GuestId == g.Id)).Select(g => g.Name.Split(' ')[0]);
+            <div class="bg-white rounded-2xl border border-[#E3E1D5] p-12 text-center my-6">
+                <div class="w-12 h-12 rounded-full bg-[#E9F0E9] text-[#244E3B] flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </div>
+                <h3 class="text-sm font-bold text-[#233D32] mb-1">No active dishes found</h3>
+                <p class="text-xs text-[#738078] mb-4">Add a new dish or check the Archived tab to restore previously deleted items.</p>
+                <button type="button" @onclick="OpenAddModal" class="px-4 py-2 bg-[#244E3B] text-white text-xs font-semibold rounded-xl hover:bg-[#1B3D2E] transition shadow-xs">
+                    Add dish
+                </button>
+            </div>
+        }
+        else
+        {
+            <!-- Main Courses and Shared Sides -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                @foreach (var dish in DisplayedDishes.Where(d => d.Category != "Appetizer"))
+                {
+                    var isCurrentActive = selectedDish?.Id == dish.Id;
+                    var selections = ev.PreOrders.Where(p => p.MenuItemId == dish.Id).ToList();
 
-            <div class="bg-white rounded-2xl border @(isCurrentActive ? "border-[#244E3B] ring-1 ring-[#244E3B]" : "border-[#E3E1D5]") shadow-xs overflow-hidden hover:border-[#244E3B] transition flex flex-col justify-between">
-                <div class="cursor-pointer" @onclick="() => SelectDish(dish)">
-                    <div class="h-44 bg-cover bg-center" style="background-image: url('@(string.IsNullOrWhiteSpace(dish.ImageUrl) ? "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80" : dish.ImageUrl)');"></div>
-                    <div class="p-5 pb-3">
-                        <div class="flex items-start justify-between mb-1.5">
-                            <h3 class="text-base font-bold text-[#233D32]">@dish.Name</h3>
-                            <span class="text-base font-bold text-[#233D32]">$@dish.Price.ToString("0.##")</span>
+                    <div class="bg-white rounded-2xl border @(isCurrentActive ? "border-[#244E3B] ring-1 ring-[#244E3B]" : "border-[#E3E1D5]") shadow-xs overflow-hidden hover:border-[#244E3B] transition flex flex-col justify-between">
+                        <div class="cursor-pointer" @onclick="() => SelectDish(dish)">
+                            <div class="h-44 bg-cover bg-center" style="background-image: url('@(string.IsNullOrWhiteSpace(dish.ImageUrl) ? "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80" : dish.ImageUrl)');"></div>
+                            <div class="p-5 pb-3">
+                                <div class="flex items-start justify-between mb-1.5">
+                                    <h3 class="text-base font-bold text-[#233D32]">@dish.Name</h3>
+                                    <span class="text-base font-bold text-[#233D32]">$@dish.Price.ToString("0.00")</span>
+                                </div>
+                                <p class="text-xs text-[#738078] mb-3 leading-relaxed">@dish.Description</p>
+
+                                <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                                    @foreach (var allergen in dish.DeclaredAllergens)
+                                    {
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#FFF8EC] text-[#945900]">
+                                            Contains @allergen
+                                        </span>
+                                    }
+                                    @if (dish.DeclaredAllergens.Count == 0)
+                                    {
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#EAF5EE] text-[#247847]">
+                                            No major declared allergens
+                                        </span>
+                                    }
+                                </div>
+                            </div>
                         </div>
-                        <p class="text-xs text-[#738078] mb-3">@dish.Description</p>
 
-                        <div class="flex flex-wrap items-center gap-1.5 mb-2">
-                            @foreach (var allergen in dish.DeclaredAllergens)
-                            {
-                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#FFF8EC] text-[#945900]">
-                                    Contains @allergen
-                                </span>
-                            }
-                            @if (dish.DeclaredAllergens.Count == 0)
-                            {
-                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#EAF5EE] text-[#247847]">
-                                    No major allergens
-                                </span>
-                            }
+                        <!-- Action Bar: Edit, Pre-orders & Delete -->
+                        <div class="p-4 pt-3 border-t border-[#E8E7DF] flex items-center justify-between gap-2 bg-[#FAF9F5]">
+                            <div class="text-[11px] text-[#738078]">
+                                @if (dish.IsSharedDish)
+                                {
+                                    <span class="font-medium text-[#244E3B]">Shared dish</span>
+                                }
+                                else
+                                {
+                                    <span>@selections.Count pre-ordered</span>
+                                }
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <button type="button" @onclick="() => OpenEditModal(dish)" class="px-3 py-1.5 text-xs font-semibold text-[#244E3B] hover:bg-[#E9F0E9] border border-[#C5D9CC] rounded-xl transition flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    <span>Edit</span>
+                                </button>
+                                <button type="button" @onclick="() => SoftDeleteDish(dish)" class="px-3 py-1.5 text-xs font-semibold text-[#BC3A2B] hover:bg-red-50 border border-red-200 rounded-xl transition flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    <span>Delete</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                }
+            </div>
 
-                <!-- Step 8: Update (+Price) and Soft Delete Buttons -->
-                <div class="p-5 pt-3 border-t border-[#E8E7DF] flex items-center justify-between gap-2 bg-[#FAF9F5]">
-                    <div class="text-[11px] text-[#738078]">
-                        @if (dish.IsSharedDish)
-                        {
-                            <span>Shared side</span>
-                        }
-                        else
-                        {
-                            <span>@selections.Count selected</span>
-                        }
+            <!-- Appetizers Catalog -->
+            @foreach (var dish in DisplayedDishes.Where(d => d.Category == "Appetizer"))
+            {
+                <div class="bg-white rounded-xl border border-[#E3E1D5] p-4 shadow-xs flex items-center justify-between mb-6 hover:border-[#244E3B] transition">
+                    <div class="flex items-center gap-3 cursor-pointer" @onclick="() => SelectDish(dish)">
+                        <div class="w-10 h-10 rounded-lg bg-[#FAF9F5] border border-[#E3E1D5] flex items-center justify-center text-[#738078]">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-[#233D32]">@dish.Name · $@dish.Price.ToString("0.00")</div>
+                            <div class="text-[11px] text-[#738078]">@dish.Description</div>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <!-- Step 8: PATCH Update -->
-                        <button type="button" @onclick="() => RaisePrice(dish)" title="Increase price by $5 via PATCH" class="px-2.5 py-1 text-[11px] font-semibold text-[#244E3B] hover:bg-[#E9F0E9] border border-[#C5D9CC] rounded-lg transition">
-                            +$5 Price
+                        <button type="button" @onclick="() => OpenEditModal(dish)" class="px-2.5 py-1 text-xs font-semibold text-[#244E3B] hover:bg-[#E9F0E9] border border-[#C5D9CC] rounded-lg transition">
+                            Edit
                         </button>
-
-                        <!-- Step 8: Soft Delete (PATCH deleted_at = now()) -->
-                        <button type="button" @onclick="() => SoftDeleteDish(dish)" title="Soft delete row (sets deleted_at)" class="px-2.5 py-1 text-[11px] font-semibold text-[#BC3A2B] hover:bg-red-50 border border-red-200 rounded-lg transition flex items-center gap-1">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            <span>Delete</span>
+                        <button type="button" @onclick="() => SoftDeleteDish(dish)" class="px-2.5 py-1 text-xs font-semibold text-[#BC3A2B] hover:bg-red-50 border border-red-200 rounded-lg transition">
+                            Delete
                         </button>
                     </div>
                 </div>
-            </div>
+            }
         }
-    </div>
-
-    <!-- Compact Appetizer Card (Shrimp Toast) -->
-    @foreach (var dish in DisplayedDishes.Where(d => d.Category == "Appetizer"))
+    }
+    else
     {
-        <div class="bg-white rounded-xl border border-[#E3E1D5] p-4 shadow-xs flex items-center justify-between mb-6 hover:border-[#244E3B] transition">
-            <div class="flex items-center gap-3 cursor-pointer" @onclick="() => SelectDish(dish)">
-                <div class="w-10 h-10 rounded-lg bg-[#FAF9F5] border border-[#E3E1D5] flex items-center justify-center text-[#738078]">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        <!-- Archived Dishes Section -->
+        <div class="space-y-3 mb-8">
+            @if (!archivedDishes.Any())
+            {
+                <div class="bg-white rounded-2xl border border-[#E3E1D5] p-10 text-center">
+                    <p class="text-xs text-[#738078]">No archived dishes. Deleted dishes will appear here and can be restored.</p>
                 </div>
-                <div>
-                    <div class="text-xs font-bold text-[#233D32]">@dish.Name · $@dish.Price.ToString("0.##")</div>
-                    <div class="text-[11px] text-[#738078]">@dish.Description</div>
+            }
+            @foreach (var dish in archivedDishes)
+            {
+                <div class="bg-white rounded-xl border border-[#E3E1D5] p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 opacity-80 hover:opacity-100 transition">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-[#233D32] line-through">@dish.Name</span>
+                            <span class="text-xs font-semibold text-[#738078]">$@dish.Price.ToString("0.00")</span>
+                            <span class="px-2 py-0.2 rounded text-[10px] font-semibold bg-neutral-100 text-[#738078]">
+                                @dish.Category
+                            </span>
+                        </div>
+                        <div class="text-[11px] text-[#738078] mt-0.5">
+                            Archived on @dish.DeletedAt?.ToLocalTime().ToString("MMM dd, yyyy h:mm tt")
+                        </div>
+                    </div>
+                    <div>
+                        <button type="button" @onclick="() => RestoreDish(dish)" class="px-3 py-1.5 bg-[#244E3B] hover:bg-[#1B3D2E] text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <span>Restore to menu</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <button type="button" @onclick="() => RaisePrice(dish)" class="px-2 py-1 text-[11px] font-semibold text-[#244E3B] hover:bg-[#E9F0E9] border border-[#C5D9CC] rounded-lg transition">
-                    +$5
-                </button>
-                <button type="button" @onclick="() => SoftDeleteDish(dish)" class="px-2 py-1 text-[11px] font-semibold text-[#BC3A2B] hover:bg-red-50 border border-red-200 rounded-lg transition">
-                    Delete
-                </button>
-            </div>
+            }
         </div>
     }
 
-    <!-- Alert Banner -->
-    <div class="p-4 bg-[#FFF8EC] border border-[#F6D8A6] rounded-xl text-xs text-[#945900] mb-8 flex items-start gap-3">
-        <svg class="w-4 h-4 text-[#945900] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-        <p class="leading-relaxed">
-            <span class="font-bold">Part VI Milestone Implementation:</span>
-            Rows are loaded dynamically from Supabase using PostgreSQL indexes and filtered with <code class="font-mono text-[11px]">.Where(p => p.DeletedAt == null)</code>. Deletions apply soft delete (setting <code class="font-mono text-[11px]">deleted_at</code>), preserving order history and audit integrity.
-        </p>
-    </div>
-
     <!-- Guest Pre-orders Section -->
-    <div class="bg-white rounded-2xl border border-[#E3E1D5] p-6 shadow-xs">
+    <div class="bg-white rounded-2xl border border-[#E3E1D5] p-6 shadow-xs mt-8">
         <div class="mb-5 pb-3 border-b border-[#E8E7DF] flex items-center justify-between">
             <div>
                 <h2 class="text-base font-bold text-[#233D32]">Guest pre-orders</h2>
-                <p class="text-xs text-[#738078]">All 6 saved · Linked to active menu catalog</p>
+                <p class="text-xs text-[#738078]">All 6 saved · Changes remain open until Tue, Oct 20 at 5:00 PM</p>
             </div>
         </div>
 
@@ -248,7 +235,7 @@
             @foreach (var guest in ev.Guests)
             {
                 var preOrder = ev.PreOrders.FirstOrDefault(p => p.GuestId == guest.Id);
-                var dish = preOrder != null ? DisplayedDishes.FirstOrDefault(m => m.Id == preOrder.MenuItemId) : null;
+                var dish = preOrder != null ? allLoadedDishes.FirstOrDefault(m => m.Id == preOrder.MenuItemId) : null;
                 var dishCost = dish?.Price ?? 0;
 
                 <div class="p-4 bg-[#F7F6F0] rounded-xl border border-[#E3E1D5] flex flex-col justify-between cursor-pointer hover:border-[#244E3B] transition"
@@ -289,21 +276,180 @@
     </div>
 </div>
 
+<!-- Slide-over Pre-order Drawer -->
 <DishEditDrawer IsOpen="isDrawerOpen" SelectedDish="selectedDish" InitialGuestId="drawerGuestId" OnClose="CloseDrawer" />
+
+<!-- Add Dish Modal -->
+@if (isAddModalOpen)
+{
+    <div class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity" @onclick="() => isAddModalOpen = false"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative w-full max-w-lg bg-white rounded-2xl shadow-xl border border-[#E3E1D5] p-6 overflow-hidden">
+                <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#E8E7DF]">
+                    <h3 class="text-base font-bold text-[#233D32]">Add New Dish</h3>
+                    <button type="button" @onclick="() => isAddModalOpen = false" class="text-[#738078] hover:text-[#233D32]">✕</button>
+                </div>
+
+                <div class="space-y-3.5 text-xs">
+                    <div>
+                        <label class="block font-semibold text-[#738078] mb-1">Dish Name *</label>
+                        <input @bind="formName" placeholder="e.g. Pan-seared Halibut" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none" />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-semibold text-[#738078] mb-1">Price ($) *</label>
+                            <input @bind="formPrice" type="number" step="0.50" min="0" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none" />
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-[#738078] mb-1">Category</label>
+                            <select @bind="formCategory" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] bg-white focus:border-[#244E3B] focus:outline-none">
+                                <option value="Main">Main Course</option>
+                                <option value="SharedSide">Shared Side</option>
+                                <option value="Appetizer">Appetizer</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-[#738078] mb-1">Description & Ingredients</label>
+                        <textarea @bind="formDescription" rows="2" placeholder="Description of the dish and key ingredients" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-[#738078] mb-1">Declared Allergens (comma-separated)</label>
+                        <input @bind="formAllergens" placeholder="e.g. dairy, fish, gluten" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none" />
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-5 mt-4 border-t border-[#E8E7DF]">
+                    <button type="button" @onclick="() => isAddModalOpen = false" class="px-4 py-2 border border-[#D5D3C4] rounded-xl text-xs font-semibold text-[#738078] hover:bg-neutral-50">
+                        Cancel
+                    </button>
+                    <button type="button" @onclick="SaveNewDish" disabled="@(isSaving || string.IsNullOrWhiteSpace(formName))" class="px-4 py-2 bg-[#244E3B] hover:bg-[#1B3D2E] text-white text-xs font-semibold rounded-xl shadow-xs transition disabled:opacity-50 flex items-center gap-1.5">
+                        @if (isSaving)
+                        {
+                            <svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <span>Add Dish</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit Dish Modal -->
+@if (isEditModalOpen && editingDish != null)
+{
+    <div class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity" @onclick="() => isEditModalOpen = false"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative w-full max-w-lg bg-white rounded-2xl shadow-xl border border-[#E3E1D5] p-6 overflow-hidden">
+                <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#E8E7DF]">
+                    <div>
+                        <div class="text-[10px] font-bold text-[#738078] uppercase tracking-wider">Edit Menu Item</div>
+                        <h3 class="text-base font-bold text-[#233D32]">@editingDish.Name</h3>
+                    </div>
+                    <button type="button" @onclick="() => isEditModalOpen = false" class="text-[#738078] hover:text-[#233D32]">✕</button>
+                </div>
+
+                <div class="space-y-3.5 text-xs">
+                    <div>
+                        <label class="block font-semibold text-[#738078] mb-1">Dish Name *</label>
+                        <input @bind="formName" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none" />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-semibold text-[#738078] mb-1">Price ($) *</label>
+                            <input @bind="formPrice" type="number" step="0.50" min="0" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none" />
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-[#738078] mb-1">Category</label>
+                            <select @bind="formCategory" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] bg-white focus:border-[#244E3B] focus:outline-none">
+                                <option value="Main">Main Course</option>
+                                <option value="SharedSide">Shared Side</option>
+                                <option value="Appetizer">Appetizer</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-[#738078] mb-1">Description & Ingredients</label>
+                        <textarea @bind="formDescription" rows="2" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-[#738078] mb-1">Declared Allergens (comma-separated)</label>
+                        <input @bind="formAllergens" class="w-full text-xs rounded-xl border border-[#D5D3C4] px-3 py-2 text-[#233D32] focus:border-[#244E3B] focus:outline-none" />
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-5 mt-4 border-t border-[#E8E7DF]">
+                    <button type="button" @onclick="() => isEditModalOpen = false" class="px-4 py-2 border border-[#D5D3C4] rounded-xl text-xs font-semibold text-[#738078] hover:bg-neutral-50">
+                        Cancel
+                    </button>
+                    <button type="button" @onclick="SaveEditedDish" disabled="@(isSaving || string.IsNullOrWhiteSpace(formName))" class="px-4 py-2 bg-[#244E3B] hover:bg-[#1B3D2E] text-white text-xs font-semibold rounded-xl shadow-xs transition disabled:opacity-50 flex items-center gap-1.5">
+                        @if (isSaving)
+                        {
+                            <svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <span>Updating...</span>
+                        }
+                        else
+                        {
+                            <span>Save Changes</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     [Parameter] public string? Id { get; set; }
 
     private string activeMenuFilter = "all";
+    private bool showArchived = false;
     private bool isDrawerOpen = false;
     private MenuItem? selectedDish;
     private string? drawerGuestId;
+
+    // Database state
+    private List<MenuItem> activeDishes = new();
+    private List<MenuItem> archivedDishes = new();
+    private List<MenuItem> allLoadedDishes = new();
+    private int activeCount = 0;
+    private int archivedCount = 0;
+    private bool isDbLoading = false;
+
+    // Modal & Form State
+    private bool isAddModalOpen = false;
+    private bool isEditModalOpen = false;
+    private MenuItem? editingDish;
+    private string formName = "";
+    private decimal formPrice = 24.00m;
+    private string formCategory = "Main";
+    private string formDescription = "";
+    private string formAllergens = "";
+    private bool isSaving = false;
 
     private IEnumerable<MenuItem> DisplayedDishes
     {
         get
         {
-            IEnumerable<MenuItem> dishes = dbDishes.Count > 0 ? dbDishes : DiningService.CurrentEvent.Menu;
+            if (showArchived)
+            {
+                return archivedDishes;
+            }
+
+            IEnumerable<MenuItem> dishes = activeDishes;
             if (activeMenuFilter == "vegetarian")
             {
                 dishes = dishes.Where(m => m.Name.Contains("risotto", StringComparison.OrdinalIgnoreCase) || m.Name.Contains("vegetable", StringComparison.OrdinalIgnoreCase));
@@ -316,27 +462,11 @@
         }
     }
 
-    // Supabase State
-    private List<MenuItem> dbDishes = new();
-    private bool isDbLoading = false;
-    private bool dbConnected = false;
-    private string dbStatusText = "Connecting...";
-    private int softDeletedCount = 0;
-
-    // Add Form State (Step 7)
-    private bool showAddForm = false;
-    private string newName = "";
-    private decimal newPrice = 22.00m;
-    private string newCategory = "Main";
-    private string newDescription = "";
-    private string newAllergens = "";
-    private bool saving = false;
-
     protected override async Task OnInitializedAsync()
     {
         DiningService.OnChange += StateHasChanged;
         await LoadDishesFromSupabase();
-        selectedDish = DisplayedDishes.FirstOrDefault(m => m.Name.Contains("salmon", StringComparison.OrdinalIgnoreCase)) ?? DisplayedDishes.FirstOrDefault();
+        selectedDish = activeDishes.FirstOrDefault(m => m.Name.Contains("salmon", StringComparison.OrdinalIgnoreCase)) ?? activeDishes.FirstOrDefault();
     }
 
     public void Dispose()
@@ -344,51 +474,55 @@
         DiningService.OnChange -= StateHasChanged;
     }
 
-    // Step 6: Load from Supabase (GET /rest/v1/menu_items?deleted_at=is.null&order=id.asc&limit=50)
+    private void SetViewMode(bool archived)
+    {
+        showArchived = archived;
+    }
+
+    // Step 6: Load active dishes (Habit 2: filter in database via deleted_at == null)
+    // and load archived dishes
     private async Task LoadDishesFromSupabase()
     {
         isDbLoading = true;
         try
         {
-            // Habit 2: Fetch only what you need, filter in database
-            // Habit 1: Use index ordering & limit
-            var res = await Db.From<MenuItem>()
+            // Active dishes (Where deleted_at == null, ordered by id, limit 50)
+            var activeRes = await Db.From<MenuItem>()
                 .Where(p => p.DeletedAt == null)
                 .Order(p => p.Id, Ordering.Ascending)
                 .Range(0, 49)
                 .Get();
 
-            if (res.Models != null && res.Models.Count > 0)
-            {
-                dbDishes = res.Models;
-                DiningService.CurrentEvent.Menu = dbDishes;
-                dbConnected = true;
-                dbStatusText = $"Connected to Supabase ({dbDishes.Count} live dishes loaded)";
-            }
-            else
-            {
-                // In case table is created but empty, use local fallback
-                dbDishes = DiningService.CurrentEvent.Menu;
-                dbConnected = true;
-                dbStatusText = "Connected to Supabase (Table empty · showing local fallback)";
-            }
+            // Archived dishes (Where deleted_at != null)
+            var archivedRes = await Db.From<MenuItem>()
+                .Where(p => p.DeletedAt != null)
+                .Order(p => p.Id, Ordering.Ascending)
+                .Get();
 
-            // Check how many soft-deleted rows exist for audit visibility
-            try
+            activeDishes = activeRes.Models ?? new();
+            archivedDishes = archivedRes.Models ?? new();
+
+            activeCount = activeDishes.Count;
+            archivedCount = archivedDishes.Count;
+
+            allLoadedDishes = new List<MenuItem>(activeDishes);
+            allLoadedDishes.AddRange(archivedDishes);
+
+            // Synchronize with DiningService so guest pre-orders update seamlessly
+            if (activeDishes.Count > 0)
             {
-                var delRes = await Db.From<MenuItem>()
-                    .Where(p => p.DeletedAt != null)
-                    .Get();
-                softDeletedCount = delRes.Models?.Count ?? 0;
+                DiningService.CurrentEvent.Menu = activeDishes;
             }
-            catch {}
         }
         catch (Exception ex)
         {
-            // Friendly error message matching Slide 53 troubleshooting guide
-            dbConnected = false;
-            dbStatusText = $"Supabase connection: {ex.Message} (Check database/schema.sql)";
-            dbDishes = DiningService.CurrentEvent.Menu;
+            Console.WriteLine($"[Supabase] Load: {ex.Message}");
+            if (activeDishes.Count == 0)
+            {
+                activeDishes = DiningService.CurrentEvent.Menu;
+                activeCount = activeDishes.Count;
+                allLoadedDishes = activeDishes;
+            }
         }
         finally
         {
@@ -397,87 +531,131 @@
         }
     }
 
-    // Step 7: Create (POST /rest/v1/menu_items)
-    private async Task AddDish()
+    private void OpenAddModal()
     {
-        if (string.IsNullOrWhiteSpace(newName)) return;
-        saving = true;
+        formName = "";
+        formPrice = 24.00m;
+        formCategory = "Main";
+        formDescription = "";
+        formAllergens = "";
+        isAddModalOpen = true;
+    }
+
+    private void OpenEditModal(MenuItem dish)
+    {
+        editingDish = dish;
+        formName = dish.Name;
+        formPrice = dish.Price;
+        formCategory = dish.Category;
+        formDescription = dish.Description;
+        formAllergens = dish.DeclaredAllergensText;
+        isEditModalOpen = true;
+    }
+
+    // Step 7: Create dish (POST /rest/v1/menu_items)
+    private async Task SaveNewDish()
+    {
+        if (string.IsNullOrWhiteSpace(formName)) return;
+        isSaving = true;
 
         try
         {
             var newItem = new MenuItem
             {
-                Name = newName.Trim(),
-                Price = newPrice,
-                Category = newCategory,
-                Description = string.IsNullOrWhiteSpace(newDescription) ? "Chef specialty" : newDescription.Trim(),
-                DeclaredAllergensText = newAllergens.Trim(),
-                ImageUrl = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80",
-                IngredientsText = "Fresh seasonal ingredients",
+                Name = formName.Trim(),
+                Price = formPrice,
+                Category = formCategory,
+                Description = formDescription.Trim(),
+                DeclaredAllergensText = formAllergens.Trim(),
+                ImageUrl = formCategory == "Appetizer"
+                    ? "https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=600&auto=format&fit=crop&q=80"
+                    : formCategory == "SharedSide"
+                    ? "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80"
+                    : "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80",
+                IngredientsText = formDescription.Trim(),
                 CreatedAt = DateTime.UtcNow
             };
 
             await Db.From<MenuItem>().Insert(newItem);
-
-            // Reset form
-            newName = "";
-            newPrice = 22.00m;
-            newDescription = "";
-            newAllergens = "";
-            showAddForm = false;
-
+            isAddModalOpen = false;
             await LoadDishesFromSupabase();
         }
         catch (Exception ex)
         {
-            dbStatusText = $"Add error: {ex.Message}";
+            Console.WriteLine($"[Supabase] Insert error: {ex.Message}");
         }
         finally
         {
-            saving = false;
+            isSaving = false;
             StateHasChanged();
         }
     }
 
-    // Step 8: Update (PATCH /rest/v1/menu_items?id=eq.X)
-    private async Task RaisePrice(MenuItem dish)
+    // Step 8: Update dish (PATCH /rest/v1/menu_items?id=eq.X)
+    private async Task SaveEditedDish()
     {
+        if (editingDish == null || string.IsNullOrWhiteSpace(formName)) return;
+        isSaving = true;
+
         try
         {
             await Db.From<MenuItem>()
-                .Where(x => x.Id == dish.Id)
-                .Set(x => x.Price, dish.Price + 5)
+                .Where(x => x.Id == editingDish.Id)
+                .Set(x => x.Name, formName.Trim())
+                .Set(x => x.Price, formPrice)
+                .Set(x => x.Category, formCategory)
+                .Set(x => x.Description, formDescription.Trim())
+                .Set(x => x.DeclaredAllergensText, formAllergens.Trim())
                 .Update();
 
+            isEditModalOpen = false;
             await LoadDishesFromSupabase();
         }
         catch (Exception ex)
         {
-            dbStatusText = $"Update error: {ex.Message}";
+            Console.WriteLine($"[Supabase] Update error: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
         }
     }
 
-    // Step 8: Soft Delete (PATCH /rest/v1/menu_items?id=eq.X setting deleted_at)
+    // Step 8: Soft delete dish (PATCH /rest/v1/menu_items?id=eq.X setting deleted_at = now())
     private async Task SoftDeleteDish(MenuItem dish)
     {
         try
         {
             await Db.From<MenuItem>()
                 .Where(x => x.Id == dish.Id)
-                .Set(x => x.DeletedAt, (DateTime?)DateTime.UtcNow)
+                .Set(x => x.DeletedAt!, DateTime.UtcNow)
                 .Update();
 
             await LoadDishesFromSupabase();
         }
         catch (Exception ex)
         {
-            dbStatusText = $"Delete error: {ex.Message}";
+            Console.WriteLine($"[Supabase] Soft delete error: {ex.Message}");
         }
     }
 
-    private void SetFilter(string filter)
+    // Restore archived dish (PATCH /rest/v1/menu_items?id=eq.X setting deleted_at = null)
+    private async Task RestoreDish(MenuItem dish)
     {
-        activeMenuFilter = filter;
+        try
+        {
+            await Db.From<MenuItem>()
+                .Where(x => x.Id == dish.Id)
+                .Set(x => x.DeletedAt!, null)
+                .Update();
+
+            await LoadDishesFromSupabase();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Supabase] Restore error: {ex.Message}");
+        }
     }
 
     private void SelectDish(MenuItem dish)
@@ -489,7 +667,7 @@
 
     private void OpenGuestDrawer(Guest guest, MenuItem? dish)
     {
-        selectedDish = dish ?? DisplayedDishes.FirstOrDefault();
+        selectedDish = dish ?? activeDishes.FirstOrDefault();
         drawerGuestId = guest.Id;
         isDrawerOpen = true;
     }
