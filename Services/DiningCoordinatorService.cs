@@ -44,53 +44,53 @@ public class DiningCoordinatorService
         // Seed Menu
         var risotto = new MenuItem
         {
-            Id = "dish-risotto",
+            Id = 1,
             Name = "Mushroom risotto",
             Description = "Arborio rice, wild mushrooms, stock, Parmesan.",
             Price = 24.00m,
             Category = "Main",
             ImageUrl = "https://images.unsplash.com/photo-1633964913295-ceb43826e7c9?w=600&auto=format&fit=crop&q=80",
-            Ingredients = new() { "Arborio rice", "Wild mushrooms", "Vegetable or chicken stock", "Parmesan" },
-            DeclaredAllergens = new() { "dairy" },
+            IngredientsText = "Arborio rice, Wild mushrooms, Vegetable or chicken stock, Parmesan",
+            DeclaredAllergensText = "dairy",
             DefaultPrepNote = "Arborio rice, wild mushrooms, stock, Parmesan."
         };
 
         var chicken = new MenuItem
         {
-            Id = "dish-chicken",
+            Id = 2,
             Name = "Herb-roasted chicken",
             Description = "Roasted chicken, potatoes, herb jus.",
             Price = 28.00m,
             Category = "Main",
             ImageUrl = "https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=600&auto=format&fit=crop&q=80",
-            Ingredients = new() { "Roasted chicken", "Potatoes", "Herb jus", "Salt" },
-            DeclaredAllergens = new() { "poultry" },
+            IngredientsText = "Roasted chicken, Potatoes, Herb jus, Salt",
+            DeclaredAllergensText = "poultry",
             DefaultPrepNote = "Roasted chicken, potatoes, herb jus."
         };
 
         var salmon = new MenuItem
         {
-            Id = "dish-salmon",
+            Id = 3,
             Name = "Citrus salmon",
             Description = "Salmon, lemon, olive oil, dill, greens.",
             Price = 32.00m,
             Category = "Main",
             ImageUrl = "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=600&auto=format&fit=crop&q=80",
-            Ingredients = new() { "Salmon", "Lemon", "Olive oil", "Dill", "Mixed greens", "Dijon mustard", "Salt" },
-            DeclaredAllergens = new() { "fish", "mustard" },
+            IngredientsText = "Salmon, Lemon, Olive oil, Dill, Mixed greens, Dijon mustard, Salt",
+            DeclaredAllergensText = "fish, mustard",
             DefaultPrepNote = "Roasted salmon with lemon, dill, olive oil and dressed seasonal greens."
         };
 
         var veggies = new MenuItem
         {
-            Id = "dish-veggies",
+            Id = 4,
             Name = "Roasted vegetables",
             Description = "Seasonal carrots, squash, olive oil, herbs.",
             Price = 12.00m,
             Category = "SharedSide",
             ImageUrl = "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80",
-            Ingredients = new() { "Seasonal carrots", "Squash", "Olive oil", "Fresh herbs" },
-            DeclaredAllergens = new(),
+            IngredientsText = "Seasonal carrots, Squash, Olive oil, Fresh herbs",
+            DeclaredAllergensText = "",
             IsSharedDish = true,
             DefaultSharedQuantity = 2,
             ServingNote = "2 bowls · Shared by all 6"
@@ -98,14 +98,14 @@ public class DiningCoordinatorService
 
         var shrimpToast = new MenuItem
         {
-            Id = "dish-shrimp",
+            Id = 5,
             Name = "Shrimp toast",
             Description = "Shrimp, sourdough, aioli.",
             Price = 14.00m,
             Category = "Appetizer",
             ImageUrl = "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&auto=format&fit=crop&q=80",
-            Ingredients = new() { "Shrimp", "Sourdough", "Aioli", "Sesame" },
-            DeclaredAllergens = new() { "shellfish", "gluten", "egg", "sesame" },
+            IngredientsText = "Shrimp, Sourdough, Aioli, Sesame",
+            DeclaredAllergensText = "shellfish, gluten, egg, sesame",
             DefaultPrepNote = "Shrimp, sourdough, aioli · 0 selected"
         };
 
@@ -455,6 +455,14 @@ public class DiningCoordinatorService
     }
 
     public void UpdateGuestPreOrder(string guestId, string dishId, int quantity, List<string> modifications, string note)
+    {
+        if (long.TryParse(dishId, out var parsedId))
+        {
+            UpdateGuestPreOrder(guestId, parsedId, quantity, modifications, note);
+        }
+    }
+
+    public void UpdateGuestPreOrder(string guestId, long dishId, int quantity, List<string> modifications, string note)
     {
         var existing = CurrentEvent.PreOrders.FirstOrDefault(p => p.GuestId == guestId);
         if (existing == null)
