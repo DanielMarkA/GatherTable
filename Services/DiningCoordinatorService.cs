@@ -41,75 +41,8 @@ public class DiningCoordinatorService
             InviteCode = "studio-oct22"
         };
 
-        // Seed Menu
-        var risotto = new MenuItem
-        {
-            Id = 1,
-            Name = "Mushroom risotto",
-            Description = "Arborio rice, wild mushrooms, stock, Parmesan.",
-            Price = 24.00m,
-            Category = "Main",
-            ImageUrl = "https://images.unsplash.com/photo-1633964913295-ceb43826e7c9?w=600&auto=format&fit=crop&q=80",
-            IngredientsText = "Arborio rice, Wild mushrooms, Vegetable or chicken stock, Parmesan",
-            DeclaredAllergensText = "dairy",
-            DefaultPrepNote = "Arborio rice, wild mushrooms, stock, Parmesan."
-        };
-
-        var chicken = new MenuItem
-        {
-            Id = 2,
-            Name = "Herb-roasted chicken",
-            Description = "Roasted chicken, potatoes, herb jus.",
-            Price = 28.00m,
-            Category = "Main",
-            ImageUrl = "https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=600&auto=format&fit=crop&q=80",
-            IngredientsText = "Roasted chicken, Potatoes, Herb jus, Salt",
-            DeclaredAllergensText = "poultry",
-            DefaultPrepNote = "Roasted chicken, potatoes, herb jus."
-        };
-
-        var salmon = new MenuItem
-        {
-            Id = 3,
-            Name = "Citrus salmon",
-            Description = "Salmon, lemon, olive oil, dill, greens.",
-            Price = 32.00m,
-            Category = "Main",
-            ImageUrl = "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=600&auto=format&fit=crop&q=80",
-            IngredientsText = "Salmon, Lemon, Olive oil, Dill, Mixed greens, Dijon mustard, Salt",
-            DeclaredAllergensText = "fish, mustard",
-            DefaultPrepNote = "Roasted salmon with lemon, dill, olive oil and dressed seasonal greens."
-        };
-
-        var veggies = new MenuItem
-        {
-            Id = 4,
-            Name = "Roasted vegetables",
-            Description = "Seasonal carrots, squash, olive oil, herbs.",
-            Price = 12.00m,
-            Category = "SharedSide",
-            ImageUrl = "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80",
-            IngredientsText = "Seasonal carrots, Squash, Olive oil, Fresh herbs",
-            DeclaredAllergensText = "",
-            IsSharedDish = true,
-            DefaultSharedQuantity = 2,
-            ServingNote = "2 bowls · Shared by all 6"
-        };
-
-        var shrimpToast = new MenuItem
-        {
-            Id = 5,
-            Name = "Shrimp toast",
-            Description = "Shrimp, sourdough, aioli.",
-            Price = 14.00m,
-            Category = "Appetizer",
-            ImageUrl = "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&auto=format&fit=crop&q=80",
-            IngredientsText = "Shrimp, Sourdough, Aioli, Sesame",
-            DeclaredAllergensText = "shellfish, gluten, egg, sesame",
-            DefaultPrepNote = "Shrimp, sourdough, aioli · 0 selected"
-        };
-
-        ev.Menu = new() { risotto, chicken, salmon, veggies, shrimpToast };
+        // Seed Menu starts empty until populated by Supabase database
+        ev.Menu = new();
 
         // Seed Guests
         var maya = new Guest
@@ -217,7 +150,7 @@ public class DiningCoordinatorService
             new GuestPreOrder
             {
                 GuestId = maya.Id,
-                MenuItemId = risotto.Id,
+                MenuItemId = 1,
                 Quantity = 1,
                 SpecialPrepSummary = "Vegetarian stock; no Parmesan",
                 KitchenNote = "Vegetarian stock and no Parmesan please.",
@@ -226,7 +159,7 @@ public class DiningCoordinatorService
             new GuestPreOrder
             {
                 GuestId = alex.Id,
-                MenuItemId = salmon.Id,
+                MenuItemId = 3,
                 Quantity = 1,
                 Modifications = new() { "Separate pan & clean utensils", "Separate prep area from shellfish" },
                 SpecialPrepSummary = "Separate pan, utensils & prep area",
@@ -237,7 +170,7 @@ public class DiningCoordinatorService
             new GuestPreOrder
             {
                 GuestId = jordan.Id,
-                MenuItemId = chicken.Id,
+                MenuItemId = 2,
                 Quantity = 1,
                 Modifications = new() { "No added salt", "Sauce on the side" },
                 SpecialPrepSummary = "No added salt; sauce on the side",
@@ -248,7 +181,7 @@ public class DiningCoordinatorService
             new GuestPreOrder
             {
                 GuestId = sam.Id,
-                MenuItemId = chicken.Id,
+                MenuItemId = 2,
                 Quantity = 1,
                 SpecialPrepSummary = "Standard preparation",
                 IsSaved = true
@@ -256,7 +189,7 @@ public class DiningCoordinatorService
             new GuestPreOrder
             {
                 GuestId = priya.Id,
-                MenuItemId = risotto.Id,
+                MenuItemId = 1,
                 Quantity = 1,
                 SpecialPrepSummary = "Vegetarian stock; no Parmesan",
                 KitchenNote = "Vegetarian stock and no cheese.",
@@ -265,7 +198,7 @@ public class DiningCoordinatorService
             new GuestPreOrder
             {
                 GuestId = leo.Id,
-                MenuItemId = salmon.Id,
+                MenuItemId = 3,
                 Quantity = 1,
                 SpecialPrepSummary = "Standard preparation",
                 IsSaved = true
@@ -557,17 +490,20 @@ public class DiningCoordinatorService
         CurrentEvent.Guests.Add(guest);
         CurrentEvent.TableInfo = $"Garden table · {CurrentEvent.Guests.Count} guests";
 
-        // Assign default dish
-        var defaultDish = CurrentEvent.Menu.FirstOrDefault(m => !m.IsSharedDish) ?? CurrentEvent.Menu.First();
-        CurrentEvent.PreOrders.Add(new GuestPreOrder
+        // Assign default dish if available
+        var defaultDish = CurrentEvent.Menu.FirstOrDefault(m => !m.IsSharedDish) ?? CurrentEvent.Menu.FirstOrDefault();
+        if (defaultDish != null)
         {
-            GuestId = id,
-            MenuItemId = defaultDish.Id,
-            Quantity = 1,
-            IsSaved = true,
-            SavedAt = DateTime.Now,
-            SpecialPrepSummary = "Standard preparation"
-        });
+            CurrentEvent.PreOrders.Add(new GuestPreOrder
+            {
+                GuestId = id,
+                MenuItemId = defaultDish.Id,
+                Quantity = 1,
+                IsSaved = true,
+                SavedAt = DateTime.Now,
+                SpecialPrepSummary = "Standard preparation"
+            });
+        }
 
         NotifyStateChanged();
     }

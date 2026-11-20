@@ -40,6 +40,17 @@
     <!-- Sub Navigation Tabs -->
     <EventTabs ActiveTab="menu" />
 
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="mb-4 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center justify-between shadow-xs">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span>@errorMessage</span>
+            </div>
+            <button type="button" @onclick="() => errorMessage = string.Empty" class="text-red-400 hover:text-red-700 font-bold ml-2">✕</button>
+        </div>
+    }
+
     <!-- Filters & View Mode Bar -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 text-xs">
         <div class="flex flex-wrap items-center gap-2">
@@ -428,6 +439,7 @@
     private int activeCount = 0;
     private int archivedCount = 0;
     private bool isDbLoading = false;
+    private string errorMessage = "";
 
     // Modal & Form State
     private bool isAddModalOpen = false;
@@ -509,20 +521,20 @@
             allLoadedDishes.AddRange(archivedDishes);
 
             // Synchronize with DiningService so guest pre-orders update seamlessly
-            if (activeDishes.Count > 0)
-            {
-                DiningService.CurrentEvent.Menu = activeDishes;
-            }
+            DiningService.CurrentEvent.Menu = activeDishes;
+            errorMessage = "";
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Supabase] Load: {ex.Message}");
-            if (activeDishes.Count == 0)
-            {
-                activeDishes = DiningService.CurrentEvent.Menu;
-                activeCount = activeDishes.Count;
-                allLoadedDishes = activeDishes;
-            }
+            Console.WriteLine($"[Supabase] Disconnected / Load error: {ex.Message}");
+            // When disconnected from the database, the menu items MUST be completely cleared
+            activeDishes.Clear();
+            archivedDishes.Clear();
+            allLoadedDishes.Clear();
+            activeCount = 0;
+            archivedCount = 0;
+            DiningService.CurrentEvent.Menu.Clear();
+            errorMessage = "Database disconnected. No menu items available.";
         }
         finally
         {
@@ -557,6 +569,7 @@
     {
         if (string.IsNullOrWhiteSpace(formName)) return;
         isSaving = true;
+        errorMessage = "";
 
         try
         {
@@ -583,6 +596,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"[Supabase] Insert error: {ex.Message}");
+            errorMessage = $"Failed to add dish: {ex.Message}";
         }
         finally
         {
@@ -596,24 +610,45 @@
     {
         if (editingDish == null || string.IsNullOrWhiteSpace(formName)) return;
         isSaving = true;
+        errorMessage = "";
+
+        var trimmedName = formName.Trim();
+        var trimmedDesc = formDescription.Trim();
+        var trimmedAllergens = formAllergens.Trim();
+        var targetId = editingDish.Id;
 
         try
         {
+            // 1. Optimistic local update
+            var target = activeDishes.FirstOrDefault(d => d.Id == targetId);
+            if (target != null)
+            {
+                target.Name = trimmedName;
+                target.Price = formPrice;
+                target.Category = formCategory;
+                target.Description = trimmedDesc;
+                target.DeclaredAllergensText = trimmedAllergens;
+            }
+            isEditModalOpen = false;
+            StateHasChanged();
+
+            // 2. Persist update in Supabase
             await Db.From<MenuItem>()
-                .Where(x => x.Id == editingDish.Id)
-                .Set(x => x.Name, formName.Trim())
+                .Where(x => x.Id == targetId)
+                .Set(x => x.Name, trimmedName)
                 .Set(x => x.Price, formPrice)
                 .Set(x => x.Category, formCategory)
-                .Set(x => x.Description, formDescription.Trim())
-                .Set(x => x.DeclaredAllergensText, formAllergens.Trim())
+                .Set(x => x.Description, trimmedDesc)
+                .Set(x => x.DeclaredAllergensText, trimmedAllergens)
                 .Update();
 
-            isEditModalOpen = false;
             await LoadDishesFromSupabase();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[Supabase] Update error: {ex.Message}");
+            errorMessage = $"Failed to update dish: {ex.Message}";
+            await LoadDishesFromSupabase();
         }
         finally
         {
@@ -625,11 +660,31 @@
     // Step 8: Soft delete dish (PATCH /rest/v1/menu_items?id=eq.X setting deleted_at = now())
     private async Task SoftDeleteDish(MenuItem dish)
     {
+        errorMessage = "";
+        var targetId = dish.Id;
+        var now = DateTime.UtcNow;
+
         try
         {
+            // 1. Optimistic local update
+            var target = activeDishes.FirstOrDefault(d => d.Id == targetId);
+            if (target != null)
+            {
+                activeDishes.Remove(target);
+                target.DeletedAt = now;
+                if (!archivedDishes.Any(d => d.Id == targetId))
+                {
+                    archivedDishes.Add(target);
+                }
+                activeCount = activeDishes.Count;
+                archivedCount = archivedDishes.Count;
+                StateHasChanged();
+            }
+
+            // 2. Persist in Supabase
             await Db.From<MenuItem>()
-                .Where(x => x.Id == dish.Id)
-                .Set(x => x.DeletedAt!, DateTime.UtcNow)
+                .Where(x => x.Id == targetId)
+                .Set(x => x.DeletedAt!, now)
                 .Update();
 
             await LoadDishesFromSupabase();
@@ -637,16 +692,41 @@
         catch (Exception ex)
         {
             Console.WriteLine($"[Supabase] Soft delete error: {ex.Message}");
+            errorMessage = $"Failed to delete dish: {ex.Message}";
+            await LoadDishesFromSupabase();
+        }
+        finally
+        {
+            StateHasChanged();
         }
     }
 
     // Restore archived dish (PATCH /rest/v1/menu_items?id=eq.X setting deleted_at = null)
     private async Task RestoreDish(MenuItem dish)
     {
+        errorMessage = "";
+        var targetId = dish.Id;
+
         try
         {
+            // 1. Optimistic local update
+            var target = archivedDishes.FirstOrDefault(d => d.Id == targetId);
+            if (target != null)
+            {
+                archivedDishes.Remove(target);
+                target.DeletedAt = null;
+                if (!activeDishes.Any(d => d.Id == targetId))
+                {
+                    activeDishes.Add(target);
+                }
+                activeCount = activeDishes.Count;
+                archivedCount = archivedDishes.Count;
+                StateHasChanged();
+            }
+
+            // 2. Persist in Supabase
             await Db.From<MenuItem>()
-                .Where(x => x.Id == dish.Id)
+                .Where(x => x.Id == targetId)
                 .Set(x => x.DeletedAt!, null)
                 .Update();
 
@@ -655,6 +735,12 @@
         catch (Exception ex)
         {
             Console.WriteLine($"[Supabase] Restore error: {ex.Message}");
+            errorMessage = $"Failed to restore dish: {ex.Message}";
+            await LoadDishesFromSupabase();
+        }
+        finally
+        {
+            StateHasChanged();
         }
     }
 
