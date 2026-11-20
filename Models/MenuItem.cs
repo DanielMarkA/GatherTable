@@ -50,7 +50,8 @@ public class MenuItem : BaseModel
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Helper properties for UI compatibility
-    [JsonIgnore]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [JsonPropertyName("client_ingredients")]
     public List<string> Ingredients
     {
         get => string.IsNullOrWhiteSpace(IngredientsText)
@@ -59,7 +60,8 @@ public class MenuItem : BaseModel
         set => IngredientsText = string.Join(", ", value);
     }
 
-    [JsonIgnore]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [JsonPropertyName("client_declared_allergens")]
     public List<string> DeclaredAllergens
     {
         get => string.IsNullOrWhiteSpace(DeclaredAllergensText)
